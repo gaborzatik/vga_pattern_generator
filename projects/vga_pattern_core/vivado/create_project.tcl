@@ -1,10 +1,10 @@
-# Vivado recreate script for vga_timing_generator
+# Vivado recreate script for vga_pattern_core
 #
 # Repository source root for this subproject:
-#   projects/vga_timing_generator
+#   projects/vga_pattern_core
 #
 # Generated Vivado project location:
-#   <repo_root>/build/vga_timing_generator
+#   <repo_root>/build/vga_pattern_core
 #
 # This script intentionally recreates the project from the curated source set
 # currently stored in version control.
@@ -13,7 +13,7 @@ set script_dir    [file normalize [file dirname [info script]]]
 set project_root  [file normalize [file join $script_dir ..]]
 set repo_root     [file normalize [file join $project_root ../..]]
 
-set project_name  "vga_timing_generator"
+set project_name  "vga_pattern_core"
 set fpga_part     "xc7a35tcpg236-1"
 
 # Keep generated project files out of the source tree
@@ -40,14 +40,28 @@ set_property default_lib xil_defaultlib [current_project]
 # Design sources
 # ------------------------------------------------------------------------------
 
-# Package
-add_files -norecurse [file join $project_root pkg vga_timing_pkg.vhd]
+# Packages
+add_files -norecurse [file join $project_root pkg vga_pattern_common_pkg.vhd]
+add_files -norecurse [file join $project_root pkg vga_pattern_gray_pkg.vhd]
+
+# Pattern modules
+add_files -norecurse [file join $project_root rtl pattern pattern_checker.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_grayscale_ramp.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_seven_bars.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_black.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_blue.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_gray_10.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_gray_50.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_gray_80.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_green.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_red.vhd]
+add_files -norecurse [file join $project_root rtl pattern pattern_solid_white.vhd]
 
 # Core module
-add_files -norecurse [file join $project_root rtl core vga_timing_generator.vhd]
+add_files -norecurse [file join $project_root rtl core vga_pattern_generator.vhd]
 
 # Top module
-set_property top vga_timing_generator [current_fileset]
+set_property top vga_pattern_generator [current_fileset]
 
 # Refresh compile order
 update_compile_order -fileset sources_1
