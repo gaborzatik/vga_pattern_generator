@@ -12,11 +12,20 @@
 
 # Vivado generated directories
 .Xil/
+*.Xil/
 .cache/
+*.cache/
+*.gen/
 .runs/
+*.runs/
 .sim/
+*.sim/
+*.srcs/
 hw/
+*.hw/
 ip_user_files/
+*.ip_user_files/
+*.xpr
 
 # Local build/output folders
 build/
