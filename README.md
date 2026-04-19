@@ -25,7 +25,8 @@ The repository is centered around subprojects under `projects/`.
 | Project | Purpose | Status on this branch |
 | --- | --- | --- |
 | [`vga_timing_generator`](projects/vga_timing_generator) | Generates VGA timing, sync signals, active-video flags, and pixel coordinates | Source files present |
-| [`vga_pattern_core`](projects/vga_pattern_core) | Generates RGB test patterns from `video_on`, `x`, `y`, and a pattern selector | README prepared on this branch; source set lives on the dedicated import branch |
+| [`vga_pattern_core`](projects/vga_pattern_core) | Generates RGB test patterns from `video_on`, `x`, `y`, and a pattern selector | Source files present |
+| [`basys3_vga_pattern_generator`](projects/basys3_vga_pattern_generator) | Basys3-specific top-level wrapper that integrates the shared cores, board constraints, and pixel-clock generation | Source files and recreate Tcl present |
 
 ## Subproject overview
 
@@ -79,6 +80,15 @@ At a high level, the intended signal flow is:
 This separation keeps timing concerns independent from image content
 generation, which makes both blocks easier to test and reuse.
 
+The repository now includes that hardware-facing integration layer for the
+Digilent Basys3 board:
+
+1. `vga_timing_generator` generates sync timing and pixel coordinates.
+2. `vga_pattern_core` converts position plus selector inputs into RGB data.
+3. `basys3_vga_pattern_generator` wraps both cores with Basys3 pin
+   constraints and a Vivado-created Clocking Wizard IP that derives the pixel
+   clock from the 100 MHz board oscillator.
+
 ## Repository layout
 
 - `projects/`
@@ -100,8 +110,8 @@ generated Vivado project directories.
 Currently available recreate scripts:
 
 - `projects/vga_timing_generator/vivado/create_project.tcl`
-- `projects/vga_pattern_core/vivado/create_project.tcl` for branches where the
-  `vga_pattern_core` source set is present
+- `projects/vga_pattern_core/vivado/create_project.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/create_project.tcl`
 
 Typical usage from the repository root:
 
@@ -115,6 +125,14 @@ The recreate scripts are designed to:
 - generate Vivado projects under `build/`
 - reduce noise in version control
 - make the checked-in source set easier to audit and review
+
+For the Basys3 wrapper specifically, the recreate script also:
+
+- imports shared HDL directly from `projects/vga_timing_generator` and
+  `projects/vga_pattern_core`
+- adds the Basys3 wrapper top-level and XDC files
+- recreates the `clk_wiz_pixel_25_2MHz` Clocking Wizard IP inside the generated
+  Vivado project instead of versioning generated IP output
 
 ## Version control policy
 
@@ -130,8 +148,8 @@ In practice, this repository follows a few simple rules:
 
 Based on the files currently present, the next likely milestones are:
 
-- integrate `vga_timing_generator` and `vga_pattern_core` in a higher-level top
-  module
 - add simulation assets under the `sim/` directories
-- add board-specific constraints under `constrs/`
-- extend the repository with a complete output path for real hardware testing
+- validate the Basys3 wrapper flow through synthesis / implementation on
+  hardware-ready builds
+- extend the repository with additional board wrappers or more reusable display
+  pipeline blocks
