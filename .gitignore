@@ -4,9 +4,11 @@
 *.str
 *.rpt
 *.pb
-*.zip
 *.xml
 *.html
+
+# Archives / exports
+*.zip
 
 # Vivado generated directories
 .Xil/
@@ -16,17 +18,27 @@
 hw/
 ip_user_files/
 
-# Generated files
+# Local build/output folders
+build/
+dist/
+out/
+tmp/
+
+# Generated implementation artifacts
 *.dcp
 *.bit
 *.bin
 *.ltx
+*.wdb
+*.wcfg.bak
+
+# Generated HDL stubs / netlists
 *_stub.v
 *_stub.vhdl
 *_funcsim.v
 *_funcsim.vhdl
 
-# OS / editor
+# OS / editor noise
 .DS_Store
 Thumbs.db
 *.tmp
