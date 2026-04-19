@@ -1,0 +1,33 @@
+# Vivado logs / reports
+*.jou
+*.log
+*.str
+*.rpt
+*.pb
+*.zip
+*.xml
+*.html
+
+# Vivado generated directories
+.Xil/
+.cache/
+.runs/
+.sim/
+hw/
+ip_user_files/
+
+# Generated files
+*.dcp
+*.bit
+*.bin
+*.ltx
+*_stub.v
+*_stub.vhdl
+*_funcsim.v
+*_funcsim.vhdl
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
