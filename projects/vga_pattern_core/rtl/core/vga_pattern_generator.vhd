@@ -123,7 +123,7 @@ begin
             G_Y_WIDTH       => G_Y_WIDTH
         )
         port map (
-            checker_pixel_i => to_unsigned(0, 2),
+            checker_pixel_i => CHECKER_PIXEL_1,
             video_on_i => video_on_i,
             x_i        => x_i,
             y_i        => y_i,
@@ -136,7 +136,7 @@ begin
         G_Y_WIDTH     => G_Y_WIDTH
     )
     port map(
-        checker_pixel_i => to_unsigned(1, 2),
+        checker_pixel_i => CHECKER_PIXEL_2,
         video_on_i => video_on_i,
         x_i        => x_i,
         y_i        => y_i,
@@ -149,7 +149,7 @@ begin
         G_Y_WIDTH     => G_Y_WIDTH
     )
     port map(
-        checker_pixel_i => to_unsigned(2, 2),
+        checker_pixel_i => CHECKER_PIXEL_4,
         video_on_i => video_on_i,
         x_i        => x_i,
         y_i        => y_i,
@@ -162,7 +162,7 @@ begin
         G_Y_WIDTH     => G_Y_WIDTH
     )
     port map(
-        checker_pixel_i => to_unsigned(3, 2),
+        checker_pixel_i => CHECKER_PIXEL_8,
         video_on_i => video_on_i,
         x_i        => x_i,
         y_i        => y_i,

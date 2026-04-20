@@ -111,6 +111,13 @@ package vga_pattern_common_pkg is
         active_length : natural
     ) return t_rgb_channel;
 
+    type t_checker_pixel_mode is (
+        CHECKER_PIXEL_1,
+        CHECKER_PIXEL_2,
+        CHECKER_PIXEL_4,
+        CHECKER_PIXEL_8
+    );
+
     -- =========================================================================
     -- Selector types
     -- =========================================================================
