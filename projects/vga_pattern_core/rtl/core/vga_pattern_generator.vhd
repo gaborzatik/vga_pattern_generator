@@ -3,9 +3,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 use work.vga_pattern_common_pkg.all;
+use work.vga_timing_pkg.all;
 
 entity vga_pattern_generator is
     generic (
+        G_VGA_MODE      : t_vga_mode := VGA_640X480_60;
         G_X_WIDTH       : natural := 10;
         G_Y_WIDTH       : natural := 10;
         G_ACTIVE_WIDTH  : natural := 640;
@@ -98,8 +100,7 @@ begin
 
     u_pattern_seven_bars : entity work.pattern_seven_bars
         generic map (
-            G_X_WIDTH      => G_X_WIDTH,
-            G_ACTIVE_WIDTH => G_ACTIVE_WIDTH
+            G_VGA_MODE => G_VGA_MODE
         )
         port map (
             video_on_i => video_on_i,
@@ -109,7 +110,7 @@ begin
 
     u_pattern_grayscale_ramp : entity work.pattern_grayscale_ramp
         generic map (
-            G_X_WIDTH      => G_X_WIDTH
+            G_VGA_MODE => G_VGA_MODE
         )
         port map (
             video_on_i => video_on_i,

@@ -94,6 +94,7 @@ begin
 
     u_vga_pattern_generator_top : entity work.vga_pattern_generator
         generic map (
+            G_VGA_MODE      => G_VGA_MODE,
             G_X_WIDTH       => C_X_WIDTH,
             G_Y_WIDTH       => C_Y_WIDTH,
             G_ACTIVE_WIDTH  => C_ACTIVE_WIDTH,
