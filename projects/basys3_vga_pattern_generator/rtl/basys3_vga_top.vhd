@@ -7,7 +7,7 @@ use work.vga_pattern_common_pkg.all;
 
 entity basys3_vga_top is
     generic (
-        G_VGA_MODE : t_vga_mode := VGA_640X480_60
+        G_VGA_MODE : t_vga_mode := XGA_1024X768_60
     );
     port (
         clk_100mhz_i : in  std_logic;
@@ -24,7 +24,10 @@ end entity basys3_vga_top;
 
 architecture rtl of basys3_vga_top is
 
-    component clk_wiz_pixel_25_2MHz
+    -- Current pixel clock: 65 MHz for the default XGA_1024X768_60 mode.
+    -- TODO: replace the single clock with runtime clock selection for the
+    -- currently supported VGA modes.
+    component clk_wiz_pixel
         port (
             clk_out1 : out std_logic;
             reset    : in  std_logic;
@@ -66,7 +69,7 @@ begin
 
     sync_rst_s <= btnc_i or (not clk_locked_s);
 
-    u_clk_wiz_pixel_25_2MHz : clk_wiz_pixel_25_2MHz
+    u_clk_wiz_pixel : clk_wiz_pixel
         port map (
             clk_out1 => pixel_clk_s,
             reset    => btnc_i,
