@@ -19,7 +19,7 @@ set pattern_root   [file normalize [file join $repo_root projects vga_pattern_co
 
 set project_name   "basys3_vga_pattern_generator"
 set fpga_part      "xc7a35tcpg236-1"
-set clk_wiz_module "clk_wiz_pixel_25_2MHz"
+set clk_wiz_module "clk_wiz_pixel"
 
 set build_root     [file join $repo_root build]
 set project_dir    [file join $build_root $project_name]
@@ -100,14 +100,14 @@ add_files -fileset constrs_1 -norecurse $constraint_file
 # ------------------------------------------------------------------------------
 #
 # Directly proven from the checked-in wrapper sources:
-#   - module name: clk_wiz_pixel_25_2MHz
+#   - module name: clk_wiz_pixel
 #   - one generated clock output is used (clk_out1)
 #   - input port is clk_in1 driven from the 100 MHz Basys3 board clock
 #   - reset input is used and wired to btnc_i
 #   - locked output is used to hold the timing core in reset until stable
 #
-# Reconstructed from the wrapper naming plus the default VGA mode:
-#   - requested output frequency is 25.200 MHz
+# Current default wrapper mode:
+#   - requested output frequency is 65.000 MHz for XGA_1024X768_60
 #
 # The original .xci/.xcix customization file is not present in this workspace,
 # so only the parameters evidenced by source plus the necessary reconstruction
@@ -121,7 +121,7 @@ set_property -dict [list \
     CONFIG.PRIM_IN_FREQ {100.000} \
     CONFIG.PRIMARY_PORT {clk_in1} \
     CONFIG.NUM_OUT_CLKS {1} \
-    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {25.200} \
+    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {65.000} \
     CONFIG.CLKOUT1_REQUESTED_PHASE {0.000} \
     CONFIG.CLKOUT1_REQUESTED_DUTY_CYCLE {50.000} \
     CONFIG.USE_RESET {true} \

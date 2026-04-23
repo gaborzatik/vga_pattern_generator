@@ -36,7 +36,7 @@ the strongest facts available from the checked-in sources.
 
 ### Directly identified from project files
 
-- Clocking Wizard instance/module name: `clk_wiz_pixel_25_2MHz`
+- Clocking Wizard instance/module name: `clk_wiz_pixel`
 - Input clock port name: `clk_in1`
 - Output clock port name used by the wrapper: `clk_out1`
 - Reset port name: `reset`
@@ -45,13 +45,42 @@ the strongest facts available from the checked-in sources.
 - Locked is actively used by the wrapper
 - Basys3 board input clock is 100 MHz
 
-### Reconstructed assumption
+### Current reconstructed configuration
 
-- Requested output frequency: `25.200 MHz`
+- Requested output frequency: `65.000 MHz`
+- Current default wrapper mode: `XGA_1024X768_60`
 
-This assumption comes from the module name plus the default wrapper VGA mode
-(`VGA_640X480_60`). If you still have the original Vivado IP customization
-files, compare them against the Tcl and update the property set if needed.
+This configuration matches the current wrapper default mode
+(`XGA_1024X768_60`) and the checked-in Vivado recreate Tcl. If you still have
+the original Vivado IP customization files, compare them against the Tcl and
+update the property set if needed.
+
+## RTL linter waiver rationale
+
+Vivado generates a Verilog wrapper for the Clocking Wizard IP under the build
+tree. That generated wrapper includes optional clock outputs and internal
+`*_unused` sink signals even when this project only uses `clk_out1`, `reset`,
+and `locked`.
+
+When the RTL linter analyzes that generated wrapper, it reports expected
+`ASSIGN-5` and `ASSIGN-6` warnings about bits that are not set or not read.
+These warnings originate from tool-generated IP scaffolding rather than from
+the checked-in user RTL.
+
+The project therefore keeps targeted linter waivers in a separate
+version-controlled Tcl file for the generated Clocking Wizard wrapper
+hierarchy (`clk_wiz_pixel_clk_wiz`) instead of modifying the generated IP
+sources. This choice keeps the flow reproducible across IP regeneration,
+avoids manual edits that Vivado would overwrite, and preserves linter
+visibility for the project's own HDL files.
+
+Vivado 2024.2 also requires each `create_waiver` call to include a
+`-description` field. The checked-in waiver script supplies that explicitly.
+
+The waivers are loaded by the dedicated linter batch flow rather than being
+created during project recreation. In practice, this makes the behavior stable
+across separate Vivado batch sessions, because `run_linter.tcl` explicitly
+sources the waiver file before calling `synth_design -lint`.
 
 ## Vivado usage
 

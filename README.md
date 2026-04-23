@@ -131,7 +131,7 @@ For the Basys3 wrapper specifically, the recreate script also:
 - imports shared HDL directly from `projects/vga_timing_generator` and
   `projects/vga_pattern_core`
 - adds the Basys3 wrapper top-level and XDC files
-- recreates the `clk_wiz_pixel_25_2MHz` Clocking Wizard IP inside the generated
+- recreates the `clk_wiz_pixel` Clocking Wizard IP inside the generated
   Vivado project instead of versioning generated IP output
 
 ## Version control policy
