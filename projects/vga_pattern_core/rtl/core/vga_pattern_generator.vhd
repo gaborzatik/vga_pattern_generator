@@ -118,56 +118,36 @@ begin
         );
         
     u_pattern_checker_1px : entity work.pattern_checker
-        generic map (
-            G_X_WIDTH       => G_X_WIDTH,
-            G_Y_WIDTH       => G_Y_WIDTH
-        )
         port map (
-            checker_pixel_i => CHECKER_PIXEL_1,
             video_on_i => video_on_i,
-            x_i        => x_i,
-            y_i        => y_i,
+            x_bit_i    => x_i(0),
+            y_bit_i    => y_i(0),
             rgb_o      => checker_1px_rgb_s
         );
         
     u_pattern_checker_2px : entity work.pattern_checker
-        generic map(
-        G_X_WIDTH     => G_X_WIDTH,
-        G_Y_WIDTH     => G_Y_WIDTH
-    )
-    port map(
-        checker_pixel_i => CHECKER_PIXEL_2,
-        video_on_i => video_on_i,
-        x_i        => x_i,
-        y_i        => y_i,
-        rgb_o      => checker_2px_rgb_s
-    );
+        port map (
+            video_on_i => video_on_i,
+            x_bit_i    => x_i(1),
+            y_bit_i    => y_i(1),
+            rgb_o      => checker_2px_rgb_s
+        );
         
     u_pattern_checker_4px : entity work.pattern_checker
-        generic map(
-        G_X_WIDTH     => G_X_WIDTH,
-        G_Y_WIDTH     => G_Y_WIDTH
-    )
-    port map(
-        checker_pixel_i => CHECKER_PIXEL_4,
-        video_on_i => video_on_i,
-        x_i        => x_i,
-        y_i        => y_i,
-        rgb_o      => checker_4px_rgb_s
-    );
+        port map (
+            video_on_i => video_on_i,
+            x_bit_i    => x_i(2),
+            y_bit_i    => y_i(2),
+            rgb_o      => checker_4px_rgb_s
+        );
         
     u_pattern_checker_8px : entity work.pattern_checker
-        generic map(
-        G_X_WIDTH     => G_X_WIDTH,
-        G_Y_WIDTH     => G_Y_WIDTH
-    )
-    port map(
-        checker_pixel_i => CHECKER_PIXEL_8,
-        video_on_i => video_on_i,
-        x_i        => x_i,
-        y_i        => y_i,
-        rgb_o      => checker_8px_rgb_s
-    );
+        port map (
+            video_on_i => video_on_i,
+            x_bit_i    => x_i(3),
+            y_bit_i    => y_i(3),
+            rgb_o      => checker_8px_rgb_s
+        );
 
     pattern_outputs_s <= (
         BLACK               => solid_black_rgb_s,
