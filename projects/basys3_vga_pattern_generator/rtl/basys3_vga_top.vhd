@@ -119,8 +119,18 @@ begin
                 green_reg_s    <= (others => '0');
                 blue_reg_s     <= (others => '0');
 
-                hsync_reg_s    <= hsync_s;
-                vsync_reg_s    <= vsync_s;
+                if C_TIMING.h_polarity = ACTIVE_LOW then
+                    hsync_reg_s <= '1';
+                else
+                    hsync_reg_s <= '0';
+                end if;
+
+                if C_TIMING.v_polarity = ACTIVE_LOW then
+                    vsync_reg_s <= '1';
+                else
+                    vsync_reg_s <= '0';
+                end if;
+                
             else
                 video_on_reg_s <= video_on_s;
 
