@@ -14,7 +14,7 @@ The current design contains:
 - a grayscale package with predefined 4-bit gray constants
 - a top-level pattern generator core that instantiates multiple individual
   pattern modules in parallel
-- a set of implemented solid, bar, grayscale, and checkerboard patterns
+- a set of implemented solid, bar, grayscale, checkerboard, and border patterns
 - a Vivado recreate script for rebuilding the project from the committed source
   set
 
@@ -49,6 +49,8 @@ sources and project recreation, without committed constraints or testbenches.
   active video
 - `rtl/pattern/pattern_seven_bars.vhd` outputs a seven-bar color pattern
 - `rtl/pattern/pattern_grayscale_ramp.vhd` outputs a stepped grayscale ramp
+- `rtl/pattern/pattern_1pixel_border.vhd` outputs a one-pixel green border on
+  the active image edges
 - `rtl/pattern/pattern_checker.vhd` outputs checkerboard patterns selected by
   checker cell size
 - `vivado/create_project.tcl` recreates the minimal Vivado project and sets
@@ -74,6 +76,7 @@ The imported RTL currently implements the following selectable outputs:
 | `CHECKER_2PX` | 2x2 checkerboard |
 | `CHECKER_4PX` | 4x4 checkerboard |
 | `CHECKER_8PX` | 8x8 checkerboard |
+| `BORDER_1PX` | One-pixel green border on the left, right, top, and bottom edges |
 
 The common package already defines many additional pattern mode names for future
 expansion, such as PLUGE, crosshatch, circles, ramps, overlays, and motion
@@ -147,6 +150,9 @@ easy to add more patterns later by extending the array mapping.
 - `pattern_solid_black` outputs black unconditionally.
 - `pattern_checker` derives checker size directly from coordinate bits, which
   keeps it compact and synthesizable.
+- `pattern_1pixel_border` compares `x_i` and `y_i` against the active-image
+  limits for the selected VGA mode, so the border stays one pixel wide across
+  the supported resolutions.
 - `pattern_seven_bars` and `pattern_grayscale_ramp` are currently written with
   `640` active pixels in mind, as indicated by both the case ranges and the
   comments in the source.

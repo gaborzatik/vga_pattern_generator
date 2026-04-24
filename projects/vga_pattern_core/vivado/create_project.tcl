@@ -45,6 +45,7 @@ add_files -norecurse [file join $project_root pkg vga_pattern_common_pkg.vhd]
 add_files -norecurse [file join $project_root pkg vga_pattern_gray_pkg.vhd]
 
 # Pattern modules
+add_files -norecurse [file join $project_root rtl pattern pattern_1pixel_border.vhd]
 add_files -norecurse [file join $project_root rtl pattern pattern_checker.vhd]
 add_files -norecurse [file join $project_root rtl pattern pattern_grayscale_ramp.vhd]
 add_files -norecurse [file join $project_root rtl pattern pattern_seven_bars.vhd]

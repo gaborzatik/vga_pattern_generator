@@ -43,6 +43,7 @@ architecture rtl of vga_pattern_generator is
     signal checker_2px_rgb_s        : t_rgb_color;
     signal checker_4px_rgb_s        : t_rgb_color;
     signal checker_8px_rgb_s        : t_rgb_color;
+    signal border_1px_rgb_s         : t_rgb_color;
 
     signal pattern_outputs_s       : t_pattern_rgb_array;
     signal selected_rgb_s          : t_rgb_color;
@@ -150,6 +151,17 @@ begin
             rgb_o      => checker_8px_rgb_s
         );
 
+    u_pattern_1pixel_border : entity work.pattern_1pixel_border
+        generic map (
+            G_VGA_MODE => G_VGA_MODE
+        )
+        port map (
+            video_on_i => video_on_i,
+            x_i        => x_i,
+            y_i        => y_i,
+            rgb_o      => border_1px_rgb_s
+        );
+
     pattern_outputs_s <= (
         BLACK               => solid_black_rgb_s,
         WHITE               => solid_white_rgb_s,
@@ -165,6 +177,7 @@ begin
         CHECKER_2PX         => checker_2px_rgb_s,
         CHECKER_4PX         => checker_4px_rgb_s,
         CHECKER_8PX         => checker_8px_rgb_s,
+        BORDER_1PX          => border_1px_rgb_s,
         others      => C_RGB_BLACK
     );
 

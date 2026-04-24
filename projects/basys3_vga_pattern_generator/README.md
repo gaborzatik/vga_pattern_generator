@@ -28,6 +28,9 @@ The shared source files from:
 The wrapper Tcl script imports those files from their repository locations. Do
 not duplicate them under this project tree.
 
+The current wrapper source import list includes the shared pattern generator
+and its committed pattern modules, including `pattern_1pixel_border.vhd`.
+
 ## Clocking Wizard provenance
 
 The original Clocking Wizard customization file (`.xci`, `.xcix`, or IP Tcl
@@ -95,3 +98,8 @@ This recreates the project under:
 ```text
 build/basys3_vga_pattern_generator
 ```
+
+The recreated project pulls in the shared timing core, the shared pattern core,
+and the Basys3 top-level wrapper. Pattern selection is driven directly from
+`sw_i`, so `BORDER_1PX` is available through the same selector path as the
+other implemented patterns.
