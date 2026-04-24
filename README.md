@@ -134,6 +134,125 @@ For the Basys3 wrapper specifically, the recreate script also:
 - recreates the `clk_wiz_pixel` Clocking Wizard IP inside the generated
   Vivado project instead of versioning generated IP output
 
+## Recommended CLI-first workflow
+
+The next step for this repository should be a simulation-first workflow that
+stays fully usable from VS Code and batch-mode Vivado Tcl.
+
+Suggested day-to-day flow:
+
+1. Edit VHDL in VS Code only.
+2. Run a focused simulation Tcl script for the module you changed.
+3. Run the linter Tcl script once the local behavior is correct.
+4. Run synthesis for integration-level changes.
+5. Run implementation and bitstream generation only when a hardware candidate
+   is needed.
+6. Program the Basys3 board only after the implementation reports are clean
+   enough to trust.
+
+This keeps the fast inner loop centered on simulation instead of on full
+project builds.
+
+## Recommended simulation layout
+
+Each reusable project should keep its own simulation assets close to its RTL.
+That makes testbenches easier to review, version, and evolve together with the
+design they validate.
+
+Recommended structure:
+
+- `projects/vga_timing_generator/sim/tb/`
+  Version-controlled VHDL testbenches for timing behavior
+- `projects/vga_timing_generator/sim/pkg/`
+  Optional simulation-only helper packages, scoreboards, and shared procedures
+- `projects/vga_timing_generator/sim/wcfg/`
+  Optional checked-in waveform layouts only if they are stable and useful
+- `projects/vga_pattern_core/sim/tb/`
+  Testbenches for selector decoding and pattern correctness
+- `projects/vga_pattern_core/sim/pkg/`
+  Shared simulation helpers for pixel and color checks
+- `projects/basys3_vga_pattern_generator/sim/tb/`
+  Wrapper-level smoke tests and integration checks
+
+Recommended rule:
+
+- prefer several small, purpose-driven testbenches over one monolithic
+  all-in-one simulation
+
+For example, it is better to have separate timing, selector, and pattern
+behavior testbenches than one large testbench that is difficult to debug after
+a regression.
+
+## Recommended first simulation files
+
+The current source set suggests the following first wave of testbenches.
+
+### `vga_timing_generator`
+
+- `tb_vga_timing_generator_reset.vhd`
+  Verifies counter reset behavior and the first valid output cycles after reset
+- `tb_vga_timing_generator_modes.vhd`
+  Verifies frame totals, sync pulse widths, and sync polarities for the
+  currently supported modes
+- `tb_vga_timing_generator_coordinates.vhd`
+  Verifies that `x_o` and `y_o` increment correctly inside the active region
+  and return to zero outside `video_on_o`
+
+### `vga_pattern_core`
+
+- `tb_vga_pattern_generator_solid_colors.vhd`
+  Verifies that solid-color modes drive the expected RGB values only when
+  `video_on_i = '1'`
+- `tb_vga_pattern_generator_selectors.vhd`
+  Verifies selector decoding, implemented-mode mapping, and black fallback for
+  unimplemented pattern values
+- `tb_vga_pattern_generator_geometry.vhd`
+  Verifies border, checkerboard, color-bar, and grayscale-ramp output at a
+  curated set of pixel coordinates
+
+### `basys3_vga_pattern_generator`
+
+- `tb_basys3_vga_top_smoke.vhd`
+  Verifies reset release, basic sync activity, and that selector input changes
+  propagate through the wrapper-level RGB outputs
+
+These should be treated as regression assets, not one-time bring-up code.
+
+## Recommended Tcl simulation entry points
+
+The repository already uses `vivado/*.tcl` as the entry point for recreate,
+lint, synthesis, implementation, and programming flows. Simulation should use
+the same pattern.
+
+Suggested script names:
+
+- `projects/vga_timing_generator/vivado/run_sim_reset.tcl`
+- `projects/vga_timing_generator/vivado/run_sim_modes.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_selectors.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_geometry.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl`
+
+Each simulation Tcl script should ideally:
+
+- recreate or open the project under `build/`
+- add the relevant testbench files into `sim_1`
+- set the simulation top explicitly
+- refresh compile order before launching simulation
+- run the simulation in batch mode until the testbench ends with `assert`
+  success or failure
+- exit with a failing Vivado process status when the testbench reports an
+  error
+- keep generated waveform databases and logs under ignored build locations
+
+Typical future usage from the repository root:
+
+```powershell
+vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_reset.tcl
+vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_geometry.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
+```
+
 ## Version control policy
 
 In practice, this repository follows a few simple rules:
@@ -143,12 +262,17 @@ In practice, this repository follows a few simple rules:
 - `main` should remain stable
 - feature work should happen on dedicated branches
 - commits should stay focused and traceable
+- a behavior change in RTL should usually be paired with a simulation update or
+  a documented reason why no simulation changed
 
 ## Current next steps suggested by the repository state
 
 Based on the files currently present, the next likely milestones are:
 
-- add simulation assets under the `sim/` directories
+- add the first committed testbenches under the `sim/` directories
+- add dedicated `run_sim_*.tcl` scripts beside the existing recreate and build
+  scripts
+- make simulation the default pre-commit validation step for RTL changes
 - validate the Basys3 wrapper flow through synthesis / implementation on
   hardware-ready builds
 - extend the repository with additional board wrappers or more reusable display
