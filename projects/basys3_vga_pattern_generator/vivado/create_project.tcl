@@ -70,6 +70,7 @@ set timing_files [list \
 set pattern_files [list \
     [file join $pattern_root pkg vga_pattern_common_pkg.vhd] \
     [file join $pattern_root pkg vga_pattern_gray_pkg.vhd] \
+    [file join $pattern_root rtl pattern pattern_1pixel_border.vhd] \
     [file join $pattern_root rtl pattern pattern_checker.vhd] \
     [file join $pattern_root rtl pattern pattern_grayscale_ramp.vhd] \
     [file join $pattern_root rtl pattern pattern_seven_bars.vhd] \
