@@ -15,17 +15,16 @@ The current design contains:
 - a top-level pattern generator core that instantiates multiple individual
   pattern modules in parallel
 - a set of implemented solid, bar, grayscale, checkerboard, and border patterns
+- simulation testbenches for solid-color behavior, selector mapping, default
+  fallback behavior, and geometry-based patterns
 - a Vivado recreate script for rebuilding the project from the committed source
   set
 
-The following directories exist as placeholders but do not currently contain
-committed design content:
+The following directory is reserved for future constraints:
 
 - `constrs/`
-- `sim/`
 
-That means the imported source set currently focuses on synthesizable design
-sources and project recreation, without committed constraints or testbenches.
+There is currently no committed XDC constraints file in this subproject.
 
 ## Source files
 
@@ -55,6 +54,15 @@ sources and project recreation, without committed constraints or testbenches.
   checker cell size
 - `vivado/create_project.tcl` recreates the minimal Vivado project and sets
   `vga_pattern_generator` as top
+- `sim/pkg/vga_pattern_sim_pkg.vhd` defines RGB comparison helpers for
+  simulation assertions
+- `sim/tb/tb_vga_pattern_generator_solid_colors.vhd` verifies solid-color and
+  gray-level outputs with `video_on_i` high and low
+- `sim/tb/tb_vga_pattern_generator_selectors.vhd` verifies selector decoding,
+  implemented-mode mapping, and black fallback for valid but unimplemented
+  pattern modes
+- `sim/tb/tb_vga_pattern_generator_geometry.vhd` verifies border,
+  checkerboard, color-bar, and grayscale-ramp outputs at selected coordinates
 
 ## Implemented patterns
 
@@ -183,11 +191,11 @@ good fit for modular FPGA video designs.
 - `rtl/pattern/`
   Individual pattern implementations
 - `vivado/`
-  Project recreation script
+  Project recreation and simulation scripts
 - `constrs/`
   Reserved for constraints
 - `sim/`
-  Reserved for simulation assets
+  Simulation packages and testbenches
 
 ## Recreating the Vivado project
 
@@ -203,8 +211,24 @@ The recreate script currently:
 - targets FPGA part `xc7a35tcpg236-1`
 - sets `target_language` to `VHDL`
 - sets `simulator_language` to `Mixed`
-- adds the package, pattern, and core source files
+- adds the timing package dependency plus the pattern packages, pattern
+  modules, and core source file
 - sets `vga_pattern_generator` as the top module
+
+## Running simulations
+
+From the repository root:
+
+```powershell
+vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl
+vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_selectors.tcl
+vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_geometry.tcl
+```
+
+The simulation scripts open or recreate the generated Vivado project under
+`build/vga_pattern_core`, ensure the shared `vga_timing_pkg.vhd` dependency is
+available, add the relevant `sim/` files to `sim_1`, set the testbench as the
+simulation top, and run behavioral XSim in batch mode.
 
 ## Next likely additions
 
@@ -213,5 +237,5 @@ Based on the current source set, the most natural next steps would be:
 - implement more of the reserved pattern modes already listed in
   `t_pattern_mode`
 - generalize coordinate-based patterns beyond the current 640-pixel assumptions
-- add simulation coverage for selector decoding and pattern correctness
+- broaden simulation coverage as new pattern modes are implemented
 - add constraints and board-level integration around the RGB outputs

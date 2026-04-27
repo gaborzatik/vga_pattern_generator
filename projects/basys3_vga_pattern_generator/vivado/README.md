@@ -13,6 +13,13 @@ This directory contains batch-mode Vivado Tcl scripts for the
 - `run_linter.tcl`
   Opens or recreates the project, loads `lint_waivers.tcl`, then runs the RTL
   linter on the top-level design
+- `run_sim_smoke.tcl`
+  Opens or recreates the project, disables the generated Clocking Wizard IP for
+  simulation, adds the simulation-only clock model and wrapper smoke test, then
+  runs behavioral XSim
+- `run_sim_all.tcl`
+  Runs the current Basys3 wrapper simulation suite; currently this delegates to
+  `run_sim_smoke.tcl`
 - `run_synthesis.tcl`
   Opens or recreates the project, resets prior synthesis results, runs
   `synth_1`, and writes synthesis reports
@@ -33,6 +40,8 @@ Run the scripts from the repository root:
 ```powershell
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/create_project.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_linter.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_synthesis.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_implementation.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/write_bitstream_only.tcl
@@ -43,6 +52,28 @@ If `vivado` is not on `PATH`, launch the same scripts through the full path to
 `vivado.bat`.
 
 ## What each script produces
+
+### `run_sim_smoke.tcl`
+
+This script produces behavioral simulation output under:
+
+- `build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.sim/sim_1/behav/xsim/`
+
+The smoke test uses:
+
+- `sim/model/clk_wiz_pixel.vhd`
+- `sim/tb/tb_basys3_vga_top_smoke.vhd`
+
+It verifies reset blanking, basic sync activity, and selector propagation
+through the wrapper-level RGB outputs. The script temporarily marks the
+generated Clocking Wizard IP as not used for simulation so the checked-in
+simulation model can provide the same entity interface.
+
+### `run_sim_all.tcl`
+
+This script currently runs the same wrapper smoke simulation as
+`run_sim_smoke.tcl`. Keep this as the aggregate simulation entry point when
+additional Basys3 wrapper testbenches are added.
 
 ### `run_linter.tcl`
 

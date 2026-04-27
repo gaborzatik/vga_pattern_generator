@@ -16,7 +16,7 @@ pattern-generation cores stored elsewhere in the repository.
 - `rtl/basys3_vga_top.vhd`
 - `constraints/basys3_vga.xdc`
 - `vivado/create_project.tcl`
-- optional wrapper-local simulation files under `sim/`
+- wrapper-local simulation files under `sim/`
 
 ## What stays outside this wrapper project
 
@@ -30,6 +30,20 @@ not duplicate them under this project tree.
 
 The current wrapper source import list includes the shared pattern generator
 and its committed pattern modules, including `pattern_1pixel_border.vhd`.
+
+## Simulation assets
+
+The wrapper project includes a smoke test and a simulation-only clocking model:
+
+- `sim/model/clk_wiz_pixel.vhd`
+  Behavioral model for the Clocking Wizard interface used by the wrapper
+- `sim/tb/tb_basys3_vga_top_smoke.vhd`
+  Checks reset blanking, sync activity after reset release, and selector
+  propagation through the wrapper-level RGB outputs
+
+The simulation model is intentionally local to `sim/` and is not a replacement
+for the Vivado-generated Clocking Wizard IP used by synthesis and
+implementation.
 
 ## Clocking Wizard provenance
 
@@ -103,3 +117,12 @@ The recreated project pulls in the shared timing core, the shared pattern core,
 and the Basys3 top-level wrapper. Pattern selection is driven directly from
 `sw_i`, so `BORDER_1PX` is available through the same selector path as the
 other implemented patterns.
+
+Run the wrapper smoke simulation from the repository root with:
+
+```powershell
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
+```
+
+`run_sim_all.tcl` currently runs the same smoke suite and provides a stable
+entry point for adding more wrapper simulations later.

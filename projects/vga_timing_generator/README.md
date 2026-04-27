@@ -13,17 +13,16 @@ The subproject currently contains:
   definitions, and helper functions
 - A synthesizable RTL core that drives `hsync`, `vsync`, active video flags,
   and pixel coordinates
+- Simulation testbenches for reset behavior, supported timing modes, and
+  coordinate generation
 - A minimal Vivado recreate script for rebuilding the project from versioned
   sources
 
-The following directories already exist in the structure but are placeholders
-at the moment:
+The following directory is reserved for future board or design constraints:
 
 - `constrs/`
-- `sim/`
 
-That means there is currently no committed XDC constraints file and no
-simulation testbench in this subproject yet.
+There is currently no committed XDC constraints file in this subproject.
 
 ## Source files
 
@@ -39,6 +38,15 @@ simulation testbench in this subproject yet.
 - `vivado/create_project.tcl`
   Recreates a minimal Vivado project and sets `vga_timing_generator` as the top
   module
+- `sim/pkg/vga_timing_sim_pkg.vhd`
+  Defines simulation-only assertion helpers and formatting utilities
+- `sim/tb/tb_vga_timing_generator_reset.vhd`
+  Checks reset behavior and first valid output cycles after reset release
+- `sim/tb/tb_vga_timing_generator_modes.vhd`
+  Checks frame timing, sync levels, active-video, video-on, and coordinates for
+  all currently supported modes
+- `sim/tb/tb_vga_timing_generator_coordinates.vhd`
+  Checks coordinate behavior at key active-region boundaries
 
 ## Supported modes
 
@@ -111,11 +119,11 @@ generation or framebuffer-based VGA output.
 - `rtl/core/`
   Synthesizable timing generator RTL
 - `vivado/`
-  Project recreation scripts
+  Project recreation and simulation scripts
 - `constrs/`
   Reserved for board or design constraints
 - `sim/`
-  Reserved for simulation sources and testbenches
+  Simulation packages and testbenches
 
 ## Recreating the Vivado project
 
@@ -131,3 +139,17 @@ The script currently:
 - targets FPGA part `xc7a35tcpg236-1`
 - adds the package and RTL source files
 - sets `vga_timing_generator` as the top module
+
+## Running simulations
+
+From the repository root:
+
+```powershell
+vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_reset.tcl
+vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_modes.tcl
+vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_coordinates.tcl
+```
+
+The simulation scripts open or recreate the generated Vivado project under
+`build/vga_timing_generator`, add the relevant `sim/` files to `sim_1`, set the
+testbench as the simulation top, and run behavioral XSim in batch mode.

@@ -12,6 +12,7 @@
 set script_dir    [file normalize [file dirname [info script]]]
 set project_root  [file normalize [file join $script_dir ..]]
 set repo_root     [file normalize [file join $project_root ../..]]
+set timing_root   [file normalize [file join $repo_root projects vga_timing_generator]]
 
 set project_name  "vga_pattern_core"
 set fpga_part     "xc7a35tcpg236-1"
@@ -23,6 +24,7 @@ set project_dir   [file join $build_root $project_name]
 puts "Script directory  : $script_dir"
 puts "Project root      : $project_root"
 puts "Repository root   : $repo_root"
+puts "Timing core root  : $timing_root"
 puts "Build root        : $build_root"
 puts "Project directory : $project_dir"
 puts "Target FPGA part  : $fpga_part"
@@ -39,6 +41,9 @@ set_property default_lib xil_defaultlib [current_project]
 # ------------------------------------------------------------------------------
 # Design sources
 # ------------------------------------------------------------------------------
+
+# Timing package dependency used by coordinate-aware patterns.
+add_files -norecurse [file join $timing_root pkg vga_timing_pkg.vhd]
 
 # Packages
 add_files -norecurse [file join $project_root pkg vga_pattern_common_pkg.vhd]
