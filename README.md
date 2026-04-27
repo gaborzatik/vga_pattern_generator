@@ -287,13 +287,14 @@ logs under `build/ci-logs/sim-logs`. Set `VIVADO_BIN` if `vivado` is not on
 ## GitHub Actions validation
 
 The repository includes a GitHub Actions workflow in
-`.github/workflows/vivado-sim.yml` that runs validation on pull requests,
-pushes to `main`, and manual dispatches.
+`.github/workflows/vivado-sim.yml` that runs entry-point validation on pull
+requests, pushes to `main`, and manual dispatches.
 
 Pull requests always run a GitHub-hosted repository validation job for the
 simulation Tcl entry points. Vivado itself is not available on standard
-GitHub-hosted runners, so the XSim regression job is enabled only when the
-repository variable `VIVADO_SELF_HOSTED_ENABLED` is set to `true`.
+GitHub-hosted runners, so the full XSim regression lives in
+`.github/workflows/vivado-xsim-regression.yml` and is started manually when a
+self-hosted Vivado runner is online.
 
 The Vivado/XSim job expects a self-hosted runner with these labels:
 

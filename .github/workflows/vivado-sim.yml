@@ -1,4 +1,4 @@
-name: Vivado Simulation
+name: Simulation Entry Points
 
 on:
   pull_request:
@@ -6,28 +6,12 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      run_vivado:
-        description: Run Vivado/XSim on the self-hosted vivado runner
-        required: false
-        default: false
-        type: boolean
-      include_aggregate:
-        description: Include aggregate run_sim_all.tcl wrappers
-        required: false
-        default: false
-        type: boolean
-      stop_on_first_failure:
-        description: Stop after the first failing simulation
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: vivado-sim-${{ github.ref }}
+  group: simulation-entrypoints-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,47 +27,3 @@ jobs:
       - name: Validate simulation Tcl entry points
         shell: pwsh
         run: ./scripts/validate_simulation_entrypoints.ps1
-
-  xsim-regression:
-    name: XSim regression
-    if: ${{ vars.VIVADO_SELF_HOSTED_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_vivado == true) }}
-    runs-on:
-      - self-hosted
-      - vivado
-    timeout-minutes: 60
-
-    env:
-      VIVADO_BIN: ${{ vars.VIVADO_BIN }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Show Vivado version
-        shell: pwsh
-        run: |
-          $vivado = if ($env:VIVADO_BIN) { $env:VIVADO_BIN } else { "vivado" }
-          & $vivado -version
-
-      - name: Run simulation Tcl scripts
-        shell: pwsh
-        run: |
-          $arguments = @()
-
-          if ("${{ github.event_name }}" -ne "workflow_dispatch" -or "${{ inputs.stop_on_first_failure }}" -ne "true") {
-            $arguments += "-ContinueOnError"
-          }
-
-          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ inputs.include_aggregate }}" -eq "true") {
-            $arguments += "-IncludeAggregate"
-          }
-
-          ./scripts/run_all_simulations.ps1 @arguments
-
-      - name: Upload simulation logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vivado-simulation-logs
-          path: build/ci-logs/sim-logs
-          if-no-files-found: warn
