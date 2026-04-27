@@ -5,9 +5,13 @@ on:
   push:
     branches:
       - main
-      - "feature/**"
   workflow_dispatch:
     inputs:
+      run_vivado:
+        description: Run Vivado/XSim on the self-hosted vivado runner
+        required: false
+        default: false
+        type: boolean
       include_aggregate:
         description: Include aggregate run_sim_all.tcl wrappers
         required: false
@@ -27,8 +31,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  simulation-entrypoints:
+    name: Repository validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate simulation Tcl entry points
+        shell: pwsh
+        run: ./scripts/validate_simulation_entrypoints.ps1
+
   xsim-regression:
     name: XSim regression
+    if: ${{ vars.VIVADO_SELF_HOSTED_ENABLED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.run_vivado == true) }}
     runs-on:
       - self-hosted
       - vivado
