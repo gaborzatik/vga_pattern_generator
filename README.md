@@ -24,9 +24,9 @@ The repository is centered around subprojects under `projects/`.
 
 | Project | Purpose | Status on this branch |
 | --- | --- | --- |
-| [`vga_timing_generator`](projects/vga_timing_generator) | Generates VGA timing, sync signals, active-video flags, and pixel coordinates | Source files present |
-| [`vga_pattern_core`](projects/vga_pattern_core) | Generates RGB test patterns from `video_on`, `x`, `y`, and a pattern selector | Source files present |
-| [`basys3_vga_pattern_generator`](projects/basys3_vga_pattern_generator) | Basys3-specific top-level wrapper that integrates the shared cores, board constraints, and pixel-clock generation | Source files and recreate Tcl present |
+| [`vga_timing_generator`](projects/vga_timing_generator) | Generates VGA timing, sync signals, active-video flags, and pixel coordinates | Source, simulation, and recreate Tcl present |
+| [`vga_pattern_core`](projects/vga_pattern_core) | Generates RGB test patterns from `video_on`, `x`, `y`, and a pattern selector | Source, simulation, and recreate Tcl present |
+| [`basys3_vga_pattern_generator`](projects/basys3_vga_pattern_generator) | Basys3-specific top-level wrapper that integrates the shared cores, board constraints, and pixel-clock generation | Source, wrapper simulation, recreate, lint, build, and program Tcl present |
 
 ## Subproject overview
 
@@ -97,7 +97,8 @@ Digilent Basys3 board:
 - `docs/`
   Repository-level process and version-control documentation
 - `scripts/`
-  Helper scripts reserved for repository automation
+  Shared helper scripts, including the Vivado simulation helper used by the
+  `run_sim_*.tcl` entry points
 - `build/`
   Generated Vivado project output location recreated from Tcl scripts and
   intentionally excluded from version control
@@ -112,6 +113,17 @@ Currently available recreate scripts:
 - `projects/vga_timing_generator/vivado/create_project.tcl`
 - `projects/vga_pattern_core/vivado/create_project.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/create_project.tcl`
+
+Currently available simulation scripts:
+
+- `projects/vga_timing_generator/vivado/run_sim_reset.tcl`
+- `projects/vga_timing_generator/vivado/run_sim_modes.tcl`
+- `projects/vga_timing_generator/vivado/run_sim_coordinates.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_selectors.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_geometry.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl`
 
 Typical usage from the repository root:
 
@@ -134,10 +146,10 @@ For the Basys3 wrapper specifically, the recreate script also:
 - recreates the `clk_wiz_pixel` Clocking Wizard IP inside the generated
   Vivado project instead of versioning generated IP output
 
-## Recommended CLI-first workflow
+## CLI-first workflow
 
-The next step for this repository should be a simulation-first workflow that
-stays fully usable from VS Code and batch-mode Vivado Tcl.
+The repository now supports a simulation-first workflow that stays fully usable
+from VS Code and batch-mode Vivado Tcl.
 
 Suggested day-to-day flow:
 
@@ -153,24 +165,24 @@ Suggested day-to-day flow:
 This keeps the fast inner loop centered on simulation instead of on full
 project builds.
 
-## Recommended simulation layout
+## Simulation layout
 
 Each reusable project should keep its own simulation assets close to its RTL.
 That makes testbenches easier to review, version, and evolve together with the
 design they validate.
 
-Recommended structure:
+Current structure:
 
 - `projects/vga_timing_generator/sim/tb/`
-  Version-controlled VHDL testbenches for timing behavior
+  Version-controlled VHDL testbenches for reset, mode, and coordinate behavior
 - `projects/vga_timing_generator/sim/pkg/`
-  Optional simulation-only helper packages, scoreboards, and shared procedures
-- `projects/vga_timing_generator/sim/wcfg/`
-  Optional checked-in waveform layouts only if they are stable and useful
+  Simulation-only assertion and formatting helpers for timing tests
 - `projects/vga_pattern_core/sim/tb/`
-  Testbenches for selector decoding and pattern correctness
+  Testbenches for solid colors, selector mapping, and geometry-based patterns
 - `projects/vga_pattern_core/sim/pkg/`
-  Shared simulation helpers for pixel and color checks
+  Shared RGB assertion and formatting helpers
+- `projects/basys3_vga_pattern_generator/sim/model/`
+  Simulation-only model for the `clk_wiz_pixel` Clocking Wizard
 - `projects/basys3_vga_pattern_generator/sim/tb/`
   Wrapper-level smoke tests and integration checks
 
@@ -183,9 +195,10 @@ For example, it is better to have separate timing, selector, and pattern
 behavior testbenches than one large testbench that is difficult to debug after
 a regression.
 
-## Recommended first simulation files
+## Simulation files
 
-The current source set suggests the following first wave of testbenches.
+The current source set includes the following first-wave regression
+testbenches.
 
 ### `vga_timing_generator`
 
@@ -218,37 +231,44 @@ The current source set suggests the following first wave of testbenches.
 
 These should be treated as regression assets, not one-time bring-up code.
 
-## Recommended Tcl simulation entry points
+## Tcl simulation entry points
 
 The repository already uses `vivado/*.tcl` as the entry point for recreate,
 lint, synthesis, implementation, and programming flows. Simulation should use
 the same pattern.
 
-Suggested script names:
+Available script names:
 
 - `projects/vga_timing_generator/vivado/run_sim_reset.tcl`
 - `projects/vga_timing_generator/vivado/run_sim_modes.tcl`
+- `projects/vga_timing_generator/vivado/run_sim_coordinates.tcl`
+- `projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_selectors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_geometry.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl`
 
-Each simulation Tcl script should ideally:
+Each simulation Tcl script:
 
-- recreate or open the project under `build/`
-- add the relevant testbench files into `sim_1`
-- set the simulation top explicitly
-- refresh compile order before launching simulation
-- run the simulation in batch mode until the testbench ends with `assert`
+- recreates or opens the project under `build/`
+- adds the relevant testbench files into `sim_1`
+- sets the simulation top explicitly
+- refreshes compile order before launching simulation
+- runs the simulation in batch mode until the testbench ends with `assert`
   success or failure
-- exit with a failing Vivado process status when the testbench reports an
+- exits with a failing Vivado process status when the testbench reports an
   error
-- keep generated waveform databases and logs under ignored build locations
+- keeps generated waveform databases and logs under ignored build locations
 
-Typical future usage from the repository root:
+The project-specific simulation entry points share
+`scripts/vivado_sim_helpers.tcl` for file checks, simulation fileset setup, and
+behavioral XSim launch.
+
+Typical usage from the repository root:
 
 ```powershell
 vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_reset.tcl
+vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl
 vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_geometry.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 ```
@@ -269,10 +289,9 @@ In practice, this repository follows a few simple rules:
 
 Based on the files currently present, the next likely milestones are:
 
-- add the first committed testbenches under the `sim/` directories
-- add dedicated `run_sim_*.tcl` scripts beside the existing recreate and build
-  scripts
 - make simulation the default pre-commit validation step for RTL changes
+- add an aggregate repository-level regression script after the individual
+  simulations are stable
 - validate the Basys3 wrapper flow through synthesis / implementation on
   hardware-ready builds
 - extend the repository with additional board wrappers or more reusable display
