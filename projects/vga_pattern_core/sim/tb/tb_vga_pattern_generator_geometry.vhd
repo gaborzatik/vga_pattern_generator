@@ -50,24 +50,31 @@ architecture sim of tb_vga_pattern_generator_geometry is
     end function;
 
     procedure drive_and_expect(
+        signal pattern_sel  : out t_pattern_sel_slv;
+        signal video_on     : out std_logic;
+        signal x_value      : out unsigned;
+        signal y_value      : out unsigned;
+        signal actual_red   : in  t_rgb_channel;
+        signal actual_green : in  t_rgb_channel;
+        signal actual_blue  : in  t_rgb_channel;
         constant mode     : t_pattern_mode;
         constant x_coord  : natural;
         constant y_coord  : natural;
-        constant video_on : std_logic;
+        constant video_on_value : std_logic;
         constant expected : t_rgb_color;
         constant message  : string
     ) is
     begin
-        pattern_sel_s <= pattern_select_from_mode(mode);
-        x_s           <= to_unsigned(x_coord, x_s'length);
-        y_s           <= to_unsigned(y_coord, y_s'length);
-        video_on_s    <= video_on;
+        pattern_sel <= pattern_select_from_mode(mode);
+        x_value     <= to_unsigned(x_coord, x_value'length);
+        y_value     <= to_unsigned(y_coord, y_value'length);
+        video_on    <= video_on_value;
         wait for 1 ns;
 
         assert_rgb_equal(
-            actual_red   => red_s,
-            actual_green => green_s,
-            actual_blue  => blue_s,
+            actual_red   => actual_red,
+            actual_green => actual_green,
+            actual_blue  => actual_blue,
             expected     => expected,
             message      => message
         );
@@ -97,83 +104,153 @@ begin
         variable sample_x_v : natural;
     begin
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => BORDER_1PX,
             x_coord  => 0,
             y_coord  => 0,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GREEN,
             message  => "Top-left border pixel mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => BORDER_1PX,
             x_coord  => C_ACTIVE_WIDTH - 1,
             y_coord  => C_ACTIVE_HEIGHT - 1,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GREEN,
             message  => "Bottom-right border pixel mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => BORDER_1PX,
             x_coord  => 1,
             y_coord  => 1,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLUE,
             message  => "Interior border pattern pixel mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => BORDER_1PX,
             x_coord  => 10,
             y_coord  => 10,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "Border pattern must blank when video_on_i is low."
         );
 
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_1PX,
             x_coord  => 0,
             y_coord  => 0,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLACK,
             message  => "CHECKER_1PX origin mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_1PX,
             x_coord  => 1,
             y_coord  => 0,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_WHITE,
             message  => "CHECKER_1PX adjacent pixel mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_2PX,
             x_coord  => 2,
             y_coord  => 0,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_WHITE,
             message  => "CHECKER_2PX block transition mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_2PX,
             x_coord  => 2,
             y_coord  => 2,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLACK,
             message  => "CHECKER_2PX diagonal block mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_4PX,
             x_coord  => 4,
             y_coord  => 0,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_WHITE,
             message  => "CHECKER_4PX block transition mismatch."
         );
         drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
             mode     => CHECKER_8PX,
             x_coord  => 8,
             y_coord  => 8,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLACK,
             message  => "CHECKER_8PX diagonal block mismatch."
         );
@@ -185,10 +262,17 @@ begin
             end if;
 
             drive_and_expect(
+                pattern_sel  => pattern_sel_s,
+                video_on     => video_on_s,
+                x_value      => x_s,
+                y_value      => y_s,
+                actual_red   => red_s,
+                actual_green => green_s,
+                actual_blue  => blue_s,
                 mode     => COLOR_BARS,
                 x_coord  => sample_x_v,
                 y_coord  => 40,
-                video_on => '1',
+                video_on_value => '1',
                 expected => color_bar_expected(bar_idx_v),
                 message  => "COLOR_BARS mismatch at bar index " & integer'image(bar_idx_v) & "."
             );
@@ -201,10 +285,17 @@ begin
             end if;
 
             drive_and_expect(
+                pattern_sel  => pattern_sel_s,
+                video_on     => video_on_s,
+                x_value      => x_s,
+                y_value      => y_s,
+                actual_red   => red_s,
+                actual_green => green_s,
+                actual_blue  => blue_s,
                 mode     => GRAYSCALE_RAMP,
                 x_coord  => sample_x_v,
                 y_coord  => 40,
-                video_on => '1',
+                video_on_value => '1',
                 expected => gray_color_from_level(gray_idx_v),
                 message  => "GRAYSCALE_RAMP mismatch at gray index " & integer'image(gray_idx_v) & "."
             );

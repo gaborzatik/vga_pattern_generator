@@ -29,20 +29,25 @@ architecture sim of tb_vga_pattern_generator_solid_colors is
     signal blue_s            : t_rgb_channel;
 
     procedure drive_and_expect(
+        signal pattern_sel : out t_pattern_sel_slv;
+        signal video_on    : out std_logic;
+        signal actual_red  : in  t_rgb_channel;
+        signal actual_green: in  t_rgb_channel;
+        signal actual_blue : in  t_rgb_channel;
         constant mode     : t_pattern_mode;
-        constant video_on : std_logic;
+        constant video_on_value : std_logic;
         constant expected : t_rgb_color;
         constant message  : string
     ) is
     begin
-        pattern_sel_s <= pattern_select_from_mode(mode);
-        video_on_s    <= video_on;
+        pattern_sel <= pattern_select_from_mode(mode);
+        video_on    <= video_on_value;
         wait for 1 ns;
 
         assert_rgb_equal(
-            actual_red   => red_s,
-            actual_green => green_s,
-            actual_blue  => blue_s,
+            actual_red   => actual_red,
+            actual_green => actual_green,
+            actual_blue  => actual_blue,
             expected     => expected,
             message      => message
         );
@@ -71,105 +76,185 @@ begin
     stimulus : process
     begin
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => BLACK,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "BLACK must stay black when video_on_i is low."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => BLACK,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLACK,
             message  => "BLACK must stay black when video_on_i is high."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => WHITE,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_WHITE,
             message  => "WHITE mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => WHITE,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "WHITE must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => RED,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_RED,
             message  => "RED mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => RED,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "RED must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GREEN,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GREEN,
             message  => "GREEN mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GREEN,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "GREEN must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => BLUE,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_BLUE,
             message  => "BLUE mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => BLUE,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_BLACK,
             message  => "BLUE must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_10,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GRAY_1_15,
             message  => "GRAY_10 mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_10,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_GRAY_0_15,
             message  => "GRAY_10 must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_50,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GRAY_7_15,
             message  => "GRAY_50 mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_50,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_GRAY_0_15,
             message  => "GRAY_50 must blank outside the addressable region."
         );
 
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_80,
-            video_on => '1',
+            video_on_value => '1',
             expected => C_RGB_GRAY_11_15,
             message  => "GRAY_80 mismatch while video_on_i is high."
         );
         drive_and_expect(
+            pattern_sel => pattern_sel_s,
+            video_on    => video_on_s,
+            actual_red  => red_s,
+            actual_green=> green_s,
+            actual_blue => blue_s,
             mode     => GRAY_80,
-            video_on => '0',
+            video_on_value => '0',
             expected => C_RGB_GRAY_0_15,
             message  => "GRAY_80 must blank outside the addressable region."
         );
