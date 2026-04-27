@@ -300,6 +300,9 @@ The runner must have Vivado available on `PATH`, or the repository/action
 variable `VIVADO_BIN` must point to the Vivado executable. Simulation logs are
 uploaded as the `vivado-simulation-logs` artifact on every run.
 
+Runner setup details are documented in
+[`docs/github_actions_vivado_runner.md`](docs/github_actions_vivado_runner.md).
+
 ## Version control policy
 
 In practice, this repository follows a few simple rules:

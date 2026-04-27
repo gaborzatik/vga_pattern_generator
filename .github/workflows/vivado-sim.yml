@@ -7,6 +7,17 @@ on:
       - main
       - "feature/**"
   workflow_dispatch:
+    inputs:
+      include_aggregate:
+        description: Include aggregate run_sim_all.tcl wrappers
+        required: false
+        default: false
+        type: boolean
+      stop_on_first_failure:
+        description: Stop after the first failing simulation
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -38,7 +49,18 @@ jobs:
 
       - name: Run simulation Tcl scripts
         shell: pwsh
-        run: ./scripts/run_all_simulations.ps1 -ContinueOnError
+        run: |
+          $arguments = @()
+
+          if ("${{ github.event_name }}" -ne "workflow_dispatch" -or "${{ inputs.stop_on_first_failure }}" -ne "true") {
+            $arguments += "-ContinueOnError"
+          }
+
+          if ("${{ github.event_name }}" -eq "workflow_dispatch" -and "${{ inputs.include_aggregate }}" -eq "true") {
+            $arguments += "-IncludeAggregate"
+          }
+
+          ./scripts/run_all_simulations.ps1 @arguments
 
       - name: Upload simulation logs
         if: always()
