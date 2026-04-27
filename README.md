@@ -273,6 +273,33 @@ vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_geometry.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 ```
 
+To run the full repository simulation regression from the CLI:
+
+```powershell
+./scripts/run_all_simulations.ps1
+```
+
+The script discovers `projects/**/vivado/run_sim_*.tcl`, skips aggregate
+`run_sim_all.tcl` wrappers by default to avoid duplicate runs, and writes CI
+logs under `build/ci-logs/sim-logs`. Set `VIVADO_BIN` if `vivado` is not on
+`PATH`.
+
+## GitHub Actions validation
+
+The repository includes a GitHub Actions workflow in
+`.github/workflows/vivado-sim.yml` that runs the simulation regression on pull
+requests, pushes to `main`, pushes to `feature/**`, and manual dispatches.
+
+Vivado is not available on standard GitHub-hosted runners, so this workflow
+expects a self-hosted runner with these labels:
+
+- `self-hosted`
+- `vivado`
+
+The runner must have Vivado available on `PATH`, or the repository/action
+variable `VIVADO_BIN` must point to the Vivado executable. Simulation logs are
+uploaded as the `vivado-simulation-logs` artifact on every run.
+
 ## Version control policy
 
 In practice, this repository follows a few simple rules:

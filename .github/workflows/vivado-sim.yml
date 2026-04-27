@@ -1,0 +1,49 @@
+name: Vivado Simulation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivado-sim-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  xsim-regression:
+    name: XSim regression
+    runs-on:
+      - self-hosted
+      - vivado
+    timeout-minutes: 60
+
+    env:
+      VIVADO_BIN: ${{ vars.VIVADO_BIN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Vivado version
+        shell: pwsh
+        run: |
+          $vivado = if ($env:VIVADO_BIN) { $env:VIVADO_BIN } else { "vivado" }
+          & $vivado -version
+
+      - name: Run simulation Tcl scripts
+        shell: pwsh
+        run: ./scripts/run_all_simulations.ps1 -ContinueOnError
+
+      - name: Upload simulation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vivado-simulation-logs
+          path: build/ci-logs/sim-logs
+          if-no-files-found: warn
