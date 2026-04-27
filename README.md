@@ -288,7 +288,7 @@ logs under `build/ci-logs/sim-logs`. Set `VIVADO_BIN` if `vivado` is not on
 
 The repository includes a GitHub Actions workflow in
 `.github/workflows/vivado-sim.yml` that runs entry-point validation on pull
-requests, pushes to `main`, and manual dispatches.
+requests, pushes to `main`, pushes to `feature/**`, and manual dispatches.
 
 Pull requests always run a GitHub-hosted repository validation job for the
 simulation Tcl entry points. Vivado itself is not available on standard

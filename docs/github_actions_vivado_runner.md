@@ -1,7 +1,8 @@
 # GitHub Actions Vivado runner setup
 
 The simulation entry-point validation workflow runs automatically for pull
-requests and pushes to `main` through `.github/workflows/vivado-sim.yml`.
+requests, pushes to `main`, and pushes to `feature/**` through
+`.github/workflows/vivado-sim.yml`.
 
 The repository has two GitHub Actions workflows:
 
