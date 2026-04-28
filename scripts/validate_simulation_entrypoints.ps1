@@ -27,18 +27,25 @@ foreach ($script in $simScripts) {
         $failures += "${relativePath}: expected script to live in a vivado directory"
     }
 
-    $requiredPatterns = @(
-        'set\s+script_dir',
-        'set\s+project_root',
-        'set\s+repo_root',
-        'set\s+helper_script',
-        'set\s+sim_top',
-        'source\s+\$helper_script',
-        'sim_ensure_project',
-        'sim_prepare_fileset',
-        'sim_run_fileset',
-        'close_project'
-    )
+    if ($script.Name -eq "run_sim_all.tcl") {
+        $requiredPatterns = @(
+            'set\s+script_dir',
+            'source\s+\$'
+        )
+    } else {
+        $requiredPatterns = @(
+            'set\s+script_dir',
+            'set\s+project_root',
+            'set\s+repo_root',
+            'set\s+helper_script',
+            'set\s+sim_top',
+            'source\s+\$helper_script',
+            'sim_ensure_project',
+            'sim_prepare_fileset',
+            'sim_run_fileset',
+            'close_project'
+        )
+    }
 
     foreach ($pattern in $requiredPatterns) {
         if ($content -notmatch $pattern) {

@@ -12,6 +12,14 @@ set project_dir    [file join $build_root $project_name]
 set project_file   [file join $project_dir "${project_name}.xpr"]
 set sim_top        "tb_basys3_vga_top_smoke"
 
+set wrapper_design_files [list \
+    [file join $project_root rtl cdc_bus_handshake.vhd] \
+    [file join $project_root rtl reset_controller.vhd] \
+    [file join $project_root rtl uart_rx_8n1.vhd] \
+    [file join $project_root rtl vga_uart_control.vhd] \
+    [file join $project_root rtl basys3_vga_top.vhd] \
+]
+
 set sim_files [list \
     [file join $pattern_root sim pkg vga_pattern_sim_pkg.vhd] \
     [file join $project_root sim model clk_wiz_pixel.vhd] \
@@ -27,6 +35,7 @@ foreach ip_file $clk_wiz_ip_files {
     set_property used_in_simulation false $ip_file
 }
 
+sim_ensure_design_files sources_1 $wrapper_design_files
 sim_prepare_fileset sim_1 $sim_top $sim_files
 
 puts "Running simulation top:"

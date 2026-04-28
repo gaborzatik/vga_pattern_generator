@@ -86,6 +86,10 @@ set pattern_files [list \
 ]
 
 set wrapper_files [list \
+    [file join $project_root rtl cdc_bus_handshake.vhd] \
+    [file join $project_root rtl reset_controller.vhd] \
+    [file join $project_root rtl uart_rx_8n1.vhd] \
+    [file join $project_root rtl vga_uart_control.vhd] \
     [file join $project_root rtl basys3_vga_top.vhd] \
 ]
 
@@ -95,6 +99,8 @@ add_source_list $wrapper_files
 
 set constraint_file [require_file [file join $project_root constraints basys3_vga.xdc]]
 add_files -fileset constrs_1 -norecurse $constraint_file
+set cdc_constraint_file [require_file [file join $project_root constraints basys3_cdc.xdc]]
+add_files -fileset constrs_1 -norecurse $cdc_constraint_file
 
 # ------------------------------------------------------------------------------
 # Clocking Wizard IP
@@ -120,6 +126,7 @@ set clk_wiz_ip [get_ips $clk_wiz_module]
 
 set_property -dict [list \
     CONFIG.PRIM_IN_FREQ {100.000} \
+    CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.PRIMARY_PORT {clk_in1} \
     CONFIG.NUM_OUT_CLKS {1} \
     CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {65.000} \
