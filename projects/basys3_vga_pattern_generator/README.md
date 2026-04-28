@@ -31,15 +31,223 @@ not duplicate them under this project tree.
 The current wrapper source import list includes the shared pattern generator
 and its committed pattern modules, including `pattern_1pixel_border.vhd`.
 
+## Branch feature summary
+
+This branch refactors the Basys3 wrapper from switch-driven pattern selection
+to UART-driven control. The major additions are:
+
+- a synthesizable 9600 baud UART RX block using 8 data bits, no parity, and
+  one stop bit
+- a UART command decoder with 2-bit operation IDs and 6-bit enum payloads
+- a Python host-side CLI in `scripts/vga_uart_cli.py`
+- wrapper-level replacement of the raw switch selector path with UART pattern
+  commands
+- a one-entry pending register so pattern commands are held until the CDC path
+  can accept them
+- a request/acknowledge multi-bit CDC handshake for sys-clock to pixel-clock
+  pattern selector updates
+- a reset controller that synchronizes the push-button input in the 100 MHz
+  system-clock domain and releases the pixel reset synchronously to the pixel
+  clock
+- explicit top-level buffering of the 100 MHz Basys3 board clock with `IBUF`
+  and `BUFG`
+- Clocking Wizard recreation with `No_buffer` input so the shared buffered
+  system clock can legally feed both system logic and the pixel clock generator
+- board-clock and CDC constraints for timing and report-CDC signoff
+- wrapper simulations for UART decoding, CDC payload transfer, and top-level
+  UART-driven RGB behavior
+- Vivado batch flows for linter, CDC report, synthesis, implementation, and
+  bitstream generation
+
+## UART control
+
+Pattern selection is driven by the Basys3 USB-UART receive pin instead of the
+board switches. The serial format is 9600 baud, 8 data bits, no parity, and
+one stop bit.
+
+Each command is one byte:
+
+```text
+bit 7..6  operation id
+bit 5..0  enum payload
+```
+
+Supported operation IDs:
+
+| Operation ID | Command | Payload |
+| --- | --- | --- |
+| `00` | `VGA_MODE_SELECT` | Pattern enum value from `t_pattern_mode` |
+| `01` | `VGA_CLOCK_SELECT` | Pixel-clock enum value |
+
+The wrapper currently stores `VGA_CLOCK_SELECT`, and the decoder simulation
+checks it, but the generated Clocking Wizard still exposes only the fixed
+65 MHz XGA pixel clock. Runtime pixel-clock switching will require a
+multi-output or dynamically reconfigurable clocking block and timing-generator
+runtime mode selection.
+
+UART commands are decoded in the 100 MHz system-clock domain. Pattern selector
+updates cross into the pixel-clock domain through a small request/acknowledge
+handshake CDC, so the multi-bit selector payload is captured as one coherent
+value instead of being sampled bit-by-bit. The source side keeps a pending
+selector update until the CDC reports ready, so a selector command is not lost
+while a previous transfer is still awaiting acknowledgement.
+
+The push-button reset is synchronized in the 100 MHz system-clock domain. The
+pixel pipeline receives its own reset that asserts while the system reset is
+active or the pixel clock is not locked, then deasserts synchronously to
+`pixel_clk_s`.
+
+## Python UART CLI
+
+The host-side control script is:
+
+```text
+scripts/vga_uart_cli.py
+```
+
+It opens the selected serial port as 9600 baud, 8N1, sends one command byte,
+flushes the port, and exits. Run it from the repository root.
+
+### Install Python and pyserial
+
+On Windows, install Python first if `python` or `py` is not available:
+
+```powershell
+winget install Python.Python.3.12
+```
+
+Close and reopen PowerShell, then check:
+
+```powershell
+py --version
+```
+
+Install the serial package:
+
+```powershell
+py -m pip install pyserial
+```
+
+If `py` is not available but `python` is, the same commands can be run with
+`python` instead:
+
+```powershell
+python -m pip install pyserial
+```
+
+### Find the Basys3 COM port
+
+Windows assigns a COM port to the Basys3 USB-UART interface. You can list
+serial ports from PowerShell with:
+
+```powershell
+[System.IO.Ports.SerialPort]::GetPortNames()
+```
+
+Use the returned port name in the CLI commands, for example `COM9`.
+
+If the script reports that a port cannot be found, the selected COM port does
+not exist. If it reports access denied, close any other program that may have
+the port open, such as Vivado Hardware Manager, PuTTY, Tera Term, or another
+serial monitor.
+
+### List supported enum values
+
+```powershell
+py scripts\vga_uart_cli.py list
+```
+
+The command prints the pattern enum names and the currently known clock enum
+names. Pattern names can be used directly in `mode` commands.
+
+### Select a pattern
+
+```powershell
+py scripts\vga_uart_cli.py mode --port COM9 RED
+```
+
+Expected output:
+
+```text
+sent VGA_MODE_SELECT value=2 payload=0x02
+```
+
+Useful bring-up examples:
+
+```powershell
+py scripts\vga_uart_cli.py mode --port COM9 WHITE
+py scripts\vga_uart_cli.py mode --port COM9 RED
+py scripts\vga_uart_cli.py mode --port COM9 GREEN
+py scripts\vga_uart_cli.py mode --port COM9 BLUE
+py scripts\vga_uart_cli.py mode --port COM9 COLOR_BARS
+py scripts\vga_uart_cli.py mode --port COM9 GRAYSCALE_RAMP
+py scripts\vga_uart_cli.py mode --port COM9 CHECKER_8PX
+py scripts\vga_uart_cli.py mode --port COM9 BORDER_1PX
+```
+
+The enum can also be sent as a number. This sends `RED`, because `RED` is
+index 2 in the pattern list:
+
+```powershell
+py scripts\vga_uart_cli.py mode --port COM9 2
+```
+
+### Send a raw payload byte
+
+The `raw` command is useful for low-level bring-up or for checking the exact
+wire payload:
+
+```powershell
+py scripts\vga_uart_cli.py raw --port COM9 0x02
+```
+
+`0x02` is binary `00_000010`: operation ID `00`, payload `2`, which selects
+the `RED` pattern.
+
+### Clock command status
+
+The CLI also supports the clock command shape:
+
+```powershell
+py scripts\vga_uart_cli.py clock --port COM9 XGA_1024X768_60
+```
+
+The RTL decoder captures this command, and the UART decoder simulation checks
+it. The current hardware wrapper still uses a fixed 65 MHz XGA pixel clock,
+so this command does not yet switch the live pixel clock. Runtime pixel-clock
+switching still needs a later clocking refactor with a multi-output or
+dynamically reconfigurable clocking block and runtime timing-mode selection.
+
+### Troubleshooting
+
+- `Python not found`
+  Install Python, reopen PowerShell, and prefer the `py` launcher on Windows.
+- `No module named serial`
+  Run `py -m pip install pyserial`.
+- `could not open port 'COM5': FileNotFoundError`
+  The port does not exist. List ports and use the returned value, for example
+  `COM9`.
+- `Access denied`
+  Another program has the port open. Close serial monitors and Vivado Hardware
+  Manager, then retry.
+- The command prints `sent ...` but the picture does not change
+  Check that the latest bitstream is programmed, the correct COM port is used,
+  the board reset button is released, and the monitor is receiving the XGA
+  output.
+
 ## Simulation assets
 
 The wrapper project includes a smoke test and a simulation-only clocking model:
 
+- `sim/tb/tb_vga_uart_control.vhd`
+  Checks the UART command decoder operation IDs and payload extraction
+- `sim/tb/tb_cdc_bus_handshake.vhd`
+  Checks the sys-clock to pixel-clock style request/acknowledge payload transfer
 - `sim/model/clk_wiz_pixel.vhd`
   Behavioral model for the Clocking Wizard interface used by the wrapper
 - `sim/tb/tb_basys3_vga_top_smoke.vhd`
-  Checks reset blanking, sync activity after reset release, and selector
-  propagation through the wrapper-level RGB outputs
+  Checks reset blanking, sync activity after reset release, and UART-driven
+  selector propagation through the wrapper-level RGB outputs
 
 The simulation model is intentionally local to `sim/` and is not a replacement
 for the Vivado-generated Clocking Wizard IP used by synthesis and
@@ -114,8 +322,8 @@ build/basys3_vga_pattern_generator
 ```
 
 The recreated project pulls in the shared timing core, the shared pattern core,
-and the Basys3 top-level wrapper. Pattern selection is driven directly from
-`sw_i`, so `BORDER_1PX` is available through the same selector path as the
+and the Basys3 top-level wrapper. Pattern selection is driven through
+`uart_rx_i`, so `BORDER_1PX` is available through the same selector path as the
 other implemented patterns.
 
 Run the wrapper smoke simulation from the repository root with:
@@ -124,5 +332,51 @@ Run the wrapper smoke simulation from the repository root with:
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 ```
 
-`run_sim_all.tcl` currently runs the same smoke suite and provides a stable
-entry point for adding more wrapper simulations later.
+Run all wrapper simulations from the repository root with:
+
+```powershell
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl
+```
+
+Generate the wrapper CDC report with:
+
+```powershell
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_report_cdc.tcl
+```
+
+Run the linter, synthesis, and implementation flows with:
+
+```powershell
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_linter.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_synthesis.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_implementation.tcl
+```
+
+The generated bitstream is written under:
+
+```text
+build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.runs/impl_1/basys3_vga_top.bit
+```
+
+## Current validated status
+
+The branch has been checked with Vivado 2024.2 on the Basys3 wrapper:
+
+- linter completed with 0 errors and 0 critical warnings
+- the remaining unwaived lint warning is the existing pattern-core
+  `pattern_outputs_s` unused-array warning
+- CDC report completes with the custom handshake bus reported as a false-path,
+  clock-enable-controlled CDC structure
+- synthesis completes with 0 errors and 0 critical warnings
+- implementation and bitstream generation complete with 0 errors and 0
+  critical warnings
+- routed timing is met with positive WNS
+- DRC reports 0 checks
+- power report runs without missing-clock warnings after the board
+  `create_clock` constraint
+- wrapper smoke, UART control, and CDC handshake simulations pass when run
+  sequentially
+
+The VGA output ports do not yet have board-level `set_output_delay`
+constraints. That is acceptable for current Basys3 bring-up, but a formal
+external-interface timing signoff should add an explicit output timing model.

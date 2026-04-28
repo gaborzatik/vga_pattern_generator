@@ -13,13 +13,21 @@ This directory contains batch-mode Vivado Tcl scripts for the
 - `run_linter.tcl`
   Opens or recreates the project, loads `lint_waivers.tcl`, then runs the RTL
   linter on the top-level design
+- `run_report_cdc.tcl`
+  Opens or recreates the project, synthesizes the top-level design, then emits
+  a detailed CDC report under the project reports directory
 - `run_sim_smoke.tcl`
   Opens or recreates the project, disables the generated Clocking Wizard IP for
   simulation, adds the simulation-only clock model and wrapper smoke test, then
   runs behavioral XSim
+- `run_sim_uart_control.tcl`
+  Opens or recreates the project, adds the UART control decoder testbench, then
+  runs behavioral XSim
+- `run_sim_cdc_bus_handshake.tcl`
+  Opens or recreates the project, adds the CDC bus handshake testbench, then
+  runs behavioral XSim
 - `run_sim_all.tcl`
-  Runs the current Basys3 wrapper simulation suite; currently this delegates to
-  `run_sim_smoke.tcl`
+  Runs the current Basys3 wrapper simulation suite
 - `run_synthesis.tcl`
   Opens or recreates the project, resets prior synthesis results, runs
   `synth_1`, and writes synthesis reports
@@ -40,6 +48,9 @@ Run the scripts from the repository root:
 ```powershell
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/create_project.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_linter.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_report_cdc.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_cdc_bus_handshake.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_uart_control.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_synthesis.tcl
@@ -64,22 +75,59 @@ The smoke test uses:
 - `sim/model/clk_wiz_pixel.vhd`
 - `sim/tb/tb_basys3_vga_top_smoke.vhd`
 
-It verifies reset blanking, basic sync activity, and selector propagation
+It verifies reset blanking, basic sync activity, and UART-driven selector propagation
 through the wrapper-level RGB outputs. The script temporarily marks the
 generated Clocking Wizard IP as not used for simulation so the checked-in
 simulation model can provide the same entity interface.
 
+### `run_sim_uart_control.tcl`
+
+This script produces behavioral simulation output under:
+
+- `build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.sim/sim_1/behav/xsim/`
+
+The testbench uses:
+
+- `sim/tb/tb_vga_uart_control.vhd`
+
+It verifies the one-byte UART command format, including `VGA_MODE_SELECT`
+pattern payload decoding and `VGA_CLOCK_SELECT` clock payload capture.
+
+### `run_sim_cdc_bus_handshake.tcl`
+
+This script produces behavioral simulation output under:
+
+- `build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.sim/sim_1/behav/xsim/`
+
+The testbench uses:
+
+- `sim/tb/tb_cdc_bus_handshake.vhd`
+
+It verifies that a multi-bit payload launched in one clock domain is delivered
+with a single valid pulse in a second clock domain by the wrapper-local
+request/acknowledge CDC module.
+
 ### `run_sim_all.tcl`
 
-This script currently runs the same wrapper smoke simulation as
-`run_sim_smoke.tcl`. Keep this as the aggregate simulation entry point when
-additional Basys3 wrapper testbenches are added.
+This script runs `run_sim_cdc_bus_handshake.tcl`, `run_sim_uart_control.tcl`,
+and `run_sim_smoke.tcl` as the aggregate Basys3 wrapper simulation entry point.
 
 ### `run_linter.tcl`
 
 The linter runs directly in batch mode and reports findings to the Vivado batch
 log. It does not create a separate design run like `synth_1` or `impl_1`.
 Before running the linter, the script explicitly sources `lint_waivers.tcl`.
+
+### `run_report_cdc.tcl`
+
+This script produces:
+
+- `build/basys3_vga_pattern_generator/reports/cdc_report.rpt`
+
+Use it after CDC-related RTL or constraint changes. The wrapper includes
+`constraints/basys3_cdc.xdc` for the custom request/acknowledge selector CDC.
+Review the report together with that XDC file before treating an implementation
+as CDC-clean.
 
 ### `run_synthesis.tcl`
 

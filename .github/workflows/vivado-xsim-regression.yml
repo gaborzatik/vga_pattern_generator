@@ -1,0 +1,66 @@
+name: Vivado XSim Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_aggregate:
+        description: Include aggregate run_sim_all.tcl wrappers
+        required: false
+        default: false
+        type: boolean
+      stop_on_first_failure:
+        description: Stop after the first failing simulation
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vivado-xsim-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  xsim-regression:
+    name: XSim regression
+    runs-on:
+      - self-hosted
+      - vivado
+    timeout-minutes: 60
+
+    env:
+      VIVADO_BIN: ${{ vars.VIVADO_BIN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Vivado version
+        shell: pwsh
+        run: |
+          $vivado = if ($env:VIVADO_BIN) { $env:VIVADO_BIN } else { "vivado" }
+          & $vivado -version
+
+      - name: Run simulation Tcl scripts
+        shell: pwsh
+        run: |
+          $arguments = @()
+
+          if ("${{ inputs.stop_on_first_failure }}" -ne "true") {
+            $arguments += "-ContinueOnError"
+          }
+
+          if ("${{ inputs.include_aggregate }}" -eq "true") {
+            $arguments += "-IncludeAggregate"
+          }
+
+          ./scripts/run_all_simulations.ps1 @arguments
+
+      - name: Upload simulation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vivado-simulation-logs
+          path: build/ci-logs/sim-logs
+          if-no-files-found: warn

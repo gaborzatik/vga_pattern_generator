@@ -87,7 +87,8 @@ Digilent Basys3 board:
 2. `vga_pattern_core` converts position plus selector inputs into RGB data.
 3. `basys3_vga_pattern_generator` wraps both cores with Basys3 pin
    constraints and a Vivado-created Clocking Wizard IP that derives the pixel
-   clock from the 100 MHz board oscillator.
+   clock from the 100 MHz board oscillator. Pattern selection is controlled
+   through a 9600 baud 8N1 USB-UART command byte.
 
 ## Repository layout
 
@@ -114,6 +115,10 @@ Currently available recreate scripts:
 - `projects/vga_pattern_core/vivado/create_project.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/create_project.tcl`
 
+CDC signoff helper:
+
+- `projects/basys3_vga_pattern_generator/vivado/run_report_cdc.tcl`
+
 Currently available simulation scripts:
 
 - `projects/vga_timing_generator/vivado/run_sim_reset.tcl`
@@ -122,6 +127,8 @@ Currently available simulation scripts:
 - `projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_selectors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_geometry.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_cdc_bus_handshake.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_uart_control.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl`
 
@@ -150,6 +157,12 @@ For the Basys3 wrapper specifically, the recreate script also:
 
 The repository now supports a simulation-first workflow that stays fully usable
 from VS Code and batch-mode Vivado Tcl.
+
+For Basys3 hardware bring-up, UART pattern selection, Python CLI usage, CDC
+notes, and the current validated linter/synthesis/implementation status, see
+the project-specific documentation:
+
+- [`projects/basys3_vga_pattern_generator/README.md`](projects/basys3_vga_pattern_generator/README.md)
 
 Suggested day-to-day flow:
 
@@ -225,8 +238,12 @@ testbenches.
 
 ### `basys3_vga_pattern_generator`
 
+- `tb_cdc_bus_handshake.vhd`
+  Verifies coherent multi-bit payload transfer between independent clock domains
+- `tb_vga_uart_control.vhd`
+  Verifies UART operation ID decoding and 6-bit payload capture
 - `tb_basys3_vga_top_smoke.vhd`
-  Verifies reset release, basic sync activity, and that selector input changes
+  Verifies reset release, basic sync activity, and that UART selector commands
   propagate through the wrapper-level RGB outputs
 
 These should be treated as regression assets, not one-time bring-up code.
@@ -245,6 +262,8 @@ Available script names:
 - `projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_selectors.tcl`
 - `projects/vga_pattern_core/vivado/run_sim_geometry.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_cdc_bus_handshake.tcl`
+- `projects/basys3_vga_pattern_generator/vivado/run_sim_uart_control.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl`
 - `projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl`
 
@@ -270,8 +289,45 @@ Typical usage from the repository root:
 vivado -mode batch -source projects/vga_timing_generator/vivado/run_sim_reset.tcl
 vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_solid_colors.tcl
 vivado -mode batch -source projects/vga_pattern_core/vivado/run_sim_geometry.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_cdc_bus_handshake.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_uart_control.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 ```
+
+To run the full repository simulation regression from the CLI:
+
+```powershell
+./scripts/run_all_simulations.ps1
+```
+
+The script discovers `projects/**/vivado/run_sim_*.tcl`, skips aggregate
+`run_sim_all.tcl` wrappers by default to avoid duplicate runs, and writes CI
+logs under `build/ci-logs/sim-logs`. Set `VIVADO_BIN` if `vivado` is not on
+`PATH`.
+
+## GitHub Actions validation
+
+The repository includes a GitHub Actions workflow in
+`.github/workflows/vivado-sim.yml` that runs entry-point validation on pull
+requests, pushes to `main`, pushes to `feature/**`, and manual dispatches.
+
+Pull requests always run a GitHub-hosted repository validation job for the
+simulation Tcl entry points. Vivado itself is not available on standard
+GitHub-hosted runners, so the full XSim regression lives in
+`.github/workflows/vivado-xsim-regression.yml` and is started manually when a
+self-hosted Vivado runner is online.
+
+The Vivado/XSim job expects a self-hosted runner with these labels:
+
+- `self-hosted`
+- `vivado`
+
+The runner must have Vivado available on `PATH`, or the repository/action
+variable `VIVADO_BIN` must point to the Vivado executable. Simulation logs are
+uploaded as the `vivado-simulation-logs` artifact on every run.
+
+Runner setup details are documented in
+[`docs/github_actions_vivado_runner.md`](docs/github_actions_vivado_runner.md).
 
 ## Version control policy
 

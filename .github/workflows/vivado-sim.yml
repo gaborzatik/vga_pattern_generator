@@ -1,0 +1,30 @@
+name: Simulation Entry Points
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: simulation-entrypoints-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulation-entrypoints:
+    name: Repository validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate simulation Tcl entry points
+        shell: pwsh
+        run: ./scripts/validate_simulation_entrypoints.ps1
