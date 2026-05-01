@@ -1,3 +1,28 @@
+--==============================================================================
+-- File        : tb_vga_pattern_generator_geometry.vhd
+-- Project     : vga_pattern_core
+-- Unit        : tb_vga_pattern_generator_geometry
+--
+-- Description :
+--   Verifies coordinate-dependent pattern behavior for border, checker, color
+--   bars, and grayscale-ramp modes.
+--
+-- Project role:
+--   Simulation testbench for the vga_pattern_generator geometry path.
+--
+-- Design level:
+--   Testbench.
+--
+-- Clock/reset:
+--   No clock or reset stimulus; the DUT behavior checked here is combinational.
+--
+-- Synthesis:
+--   Simulation-only.
+--
+-- Review notes:
+--   Samples targeted coordinates rather than every pixel. The test distinguishes
+--   video_on_i as the addressable pattern area qualifier.
+--==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -8,11 +33,23 @@ use work.vga_timing_pkg.all;
 use work.vga_pattern_common_pkg.all;
 use work.vga_pattern_sim_pkg.all;
 
+--==============================================================================
+-- Entity: tb_vga_pattern_generator_geometry
+--
+-- Purpose:
+--   Top-level simulation wrapper with no ports. The pass condition is reaching
+--   std.env.finish after all geometry-sensitive assertions complete.
+--
+-- Verification scope:
+--   Checks border edge/interior behavior, checker bit selection, representative
+--   seven-bar centers, and representative grayscale-ramp bin centers.
+--==============================================================================
 entity tb_vga_pattern_generator_geometry is
 end entity tb_vga_pattern_generator_geometry;
 
 architecture sim of tb_vga_pattern_generator_geometry is
 
+    -- Test geometry matches the default VGA mode used by the DUT generics.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
     constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
     constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
@@ -27,6 +64,8 @@ architecture sim of tb_vga_pattern_generator_geometry is
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
 
+    -- Expected color order for the seven-bar generator. This mirrors the RTL
+    -- ordering so the main stimulus loop can focus on coordinate sampling.
     function color_bar_expected(
         index : natural
     ) return t_rgb_color is
@@ -49,6 +88,8 @@ architecture sim of tb_vga_pattern_generator_geometry is
         end case;
     end function;
 
+    -- Drives selector, coordinate, and video qualifier inputs into the DUT and
+    -- checks the resulting RGB sample after combinational settling.
     procedure drive_and_expect(
         signal pattern_sel  : out t_pattern_sel_slv;
         signal video_on     : out std_logic;
@@ -82,6 +123,8 @@ architecture sim of tb_vga_pattern_generator_geometry is
 
 begin
 
+    -- Device under test: full generator used to cover selector decoding,
+    -- coordinate-dependent pattern instances, and final RGB channel extraction.
     dut : entity work.vga_pattern_generator
         generic map (
             G_VGA_MODE      => C_MODE,
@@ -100,6 +143,8 @@ begin
             blue_o        => blue_s
         );
 
+    -- Sequential geometry samples. The loops choose bin centers to avoid
+    -- ambiguous checks at bar or grayscale transition boundaries.
     stimulus : process
         variable sample_x_v : natural;
     begin
