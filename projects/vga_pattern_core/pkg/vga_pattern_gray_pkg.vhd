@@ -1,22 +1,28 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 17.04.2026 17:09:25
--- Design Name: 
--- Module Name: vga_pattern_gray_pkg - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
+--==============================================================================
+-- File        : vga_pattern_gray_pkg.vhd
+-- Project     : vga_pattern_core
+-- Unit        : vga_pattern_gray_pkg
+--
+-- Description :
+--   Defines fixed 4-bit grayscale RGB constants from black through white.
+--
+-- Project role:
+--   Supplies shared grayscale levels for solid-gray and grayscale-ramp pattern
+--   implementations and for matching testbench expectations.
+--
+-- Design level:
+--   Package.
+--
+-- Clock/reset:
+--   Not applicable.
+--
+-- Synthesis:
+--   Package constants used by synthesizable combinational RTL.
+--
+-- Review notes:
+--   The constant names encode numerator-over-15 levels, matching the
+--   C_RGB_WIDTH = 4 channel depth from vga_pattern_common_pkg.
+--==============================================================================
 
 
 library IEEE;
@@ -25,9 +31,22 @@ use ieee.numeric_std.all;
 
 use work.vga_pattern_common_pkg.all;
 
+--==============================================================================
+-- Package: vga_pattern_gray_pkg
+--
+-- Purpose:
+--   Provides named grayscale RGB records for every 4-bit channel code.
+--
+-- Intended users:
+--   Pattern blocks that need stable, reviewable gray levels instead of local
+--   literals, plus testbenches that compare against the same definitions.
+--
+-- Synthesis relevance:
+--   These constants elaborate as static RGB values in combinational pattern RTL.
+--==============================================================================
 package vga_pattern_gray_pkg is
 
-    -- Gray constants
+    -- Full-scale grayscale ladder for the project's 4-bit-per-channel RGB bus.
     constant C_RGB_GRAY_0_15 : t_rgb_color := (
         red   => (others => '0'),
         green => (others => '0'),
@@ -127,5 +146,6 @@ package vga_pattern_gray_pkg is
     
 end package vga_pattern_gray_pkg;
 
+-- Empty body is retained because the package currently exposes constants only.
 package body vga_pattern_gray_pkg is
 end package body vga_pattern_gray_pkg;

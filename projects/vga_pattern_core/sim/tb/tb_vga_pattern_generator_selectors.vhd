@@ -1,3 +1,27 @@
+--==============================================================================
+-- File        : tb_vga_pattern_generator_selectors.vhd
+-- Project     : vga_pattern_core
+-- Unit        : tb_vga_pattern_generator_selectors
+--
+-- Description :
+--   Verifies selector-to-pattern mapping for implemented modes and representative
+--   fallback behavior for unimplemented enum literals.
+--
+-- Project role:
+--   Simulation testbench for the vga_pattern_generator selector path.
+--
+-- Design level:
+--   Testbench.
+--
+-- Clock/reset:
+--   No clock or reset stimulus; the DUT behavior checked here is combinational.
+--
+-- Synthesis:
+--   Simulation-only.
+--
+-- Review notes:
+--   This testbench samples selected coordinates rather than scanning a full frame.
+--==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -9,11 +33,24 @@ use work.vga_pattern_common_pkg.all;
 use work.vga_pattern_gray_pkg.all;
 use work.vga_pattern_sim_pkg.all;
 
+--==============================================================================
+-- Entity: tb_vga_pattern_generator_selectors
+--
+-- Purpose:
+--   Top-level simulation wrapper with no ports. The pass condition is reaching
+--   std.env.finish after all selector checks complete.
+--
+-- Verification scope:
+--   Confirms selector encoding through pattern_select_from_mode for implemented
+--   patterns, and documents current black fallback behavior for selected
+--   unimplemented modes.
+--==============================================================================
 entity tb_vga_pattern_generator_selectors is
 end entity tb_vga_pattern_generator_selectors;
 
 architecture sim of tb_vga_pattern_generator_selectors is
 
+    -- Test geometry matches the default VGA mode used by the DUT generics.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
     constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
     constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
@@ -28,6 +65,8 @@ architecture sim of tb_vga_pattern_generator_selectors is
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
 
+    -- Drives a raw selector value plus coordinate/video inputs into the DUT and
+    -- checks the selected RGB sample after combinational settling.
     procedure drive_and_expect(
         signal pattern_sel  : out t_pattern_sel_slv;
         signal video_on     : out std_logic;
@@ -61,6 +100,8 @@ architecture sim of tb_vga_pattern_generator_selectors is
 
 begin
 
+    -- Device under test: the full pattern generator is used so selector decoding,
+    -- pattern production, and the enum-indexed RGB mux are checked together.
     dut : entity work.vga_pattern_generator
         generic map (
             G_VGA_MODE      => C_MODE,
@@ -79,6 +120,8 @@ begin
             blue_o        => blue_s
         );
 
+    -- Sequential selector samples. Representative unimplemented enum literals
+    -- are expected to use the top-level aggregate's black default.
     stimulus : process
     begin
         drive_and_expect(

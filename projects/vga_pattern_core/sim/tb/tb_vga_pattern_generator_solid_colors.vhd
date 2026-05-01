@@ -1,3 +1,28 @@
+--==============================================================================
+-- File        : tb_vga_pattern_generator_solid_colors.vhd
+-- Project     : vga_pattern_core
+-- Unit        : tb_vga_pattern_generator_solid_colors
+--
+-- Description :
+--   Verifies the implemented solid-color pattern selectors and their video_on_i
+--   blanking behavior.
+--
+-- Project role:
+--   Simulation testbench for the vga_pattern_generator core.
+--
+-- Design level:
+--   Testbench.
+--
+-- Clock/reset:
+--   No clock or reset stimulus; the DUT behavior checked here is combinational.
+--
+-- Synthesis:
+--   Simulation-only.
+--
+-- Review notes:
+--   This testbench does not exercise coordinate-dependent patterns or invalid
+--   selector encodings.
+--==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -9,11 +34,24 @@ use work.vga_pattern_common_pkg.all;
 use work.vga_pattern_gray_pkg.all;
 use work.vga_pattern_sim_pkg.all;
 
+--==============================================================================
+-- Entity: tb_vga_pattern_generator_solid_colors
+--
+-- Purpose:
+--   Top-level simulation wrapper with no ports. The pass condition is reaching
+--   std.env.finish after all RGB assertions complete.
+--
+-- Verification scope:
+--   Checks BLACK, WHITE, RED, GREEN, BLUE, GRAY_10, GRAY_50, and GRAY_80 for
+--   expected RGB levels when video_on_i is high and their expected blanking
+--   values when video_on_i is low.
+--==============================================================================
 entity tb_vga_pattern_generator_solid_colors is
 end entity tb_vga_pattern_generator_solid_colors;
 
 architecture sim of tb_vga_pattern_generator_solid_colors is
 
+    -- Test geometry matches the default VGA mode used by the DUT generics.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
     constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
     constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
@@ -28,6 +66,8 @@ architecture sim of tb_vga_pattern_generator_solid_colors is
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
 
+    -- Drives one selector/video_on_i combination into the combinational DUT and
+    -- compares the resulting RGB sample after a delta-stabilizing wait.
     procedure drive_and_expect(
         signal pattern_sel : out t_pattern_sel_slv;
         signal video_on    : out std_logic;
@@ -55,6 +95,9 @@ architecture sim of tb_vga_pattern_generator_solid_colors is
 
 begin
 
+    -- Device under test: pattern selector and RGB mux. The geometry generics are
+    -- supplied consistently with the timing package even though this test keeps
+    -- x_s/y_s fixed for coordinate-independent patterns.
     dut : entity work.vga_pattern_generator
         generic map (
             G_VGA_MODE      => C_MODE,
@@ -73,6 +116,8 @@ begin
             blue_o        => blue_s
         );
 
+    -- Sequential simulation stimulus. Each call is an independent combinational
+    -- sample; any assertion failure stops the test before the final note.
     stimulus : process
     begin
         drive_and_expect(

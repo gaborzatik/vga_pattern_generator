@@ -1,3 +1,28 @@
+--==============================================================================
+-- File        : pattern_grayscale_ramp.vhd
+-- Project     : vga_pattern_core
+-- Unit        : pattern_grayscale_ramp
+--
+-- Description :
+--   Generates a horizontal 16-step grayscale ramp across the addressable video
+--   width.
+--
+-- Project role:
+--   Coordinate-dependent pattern source selected by vga_pattern_generator.
+--
+-- Design level:
+--   RTL pattern block.
+--
+-- Clock/reset:
+--   No clock or reset; combinational logic driven by video_on_i and x_i.
+--
+-- Synthesis:
+--   Synthesizable combinational RTL.
+--
+-- Review notes:
+--   The ramp uses G_VGA_MODE timing geometry, so x_i is expected to be aligned
+--   with the same mode's addressable coordinate range.
+--==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -6,6 +31,21 @@ use work.vga_timing_pkg.all;
 use work.vga_pattern_common_pkg.all;
 use work.vga_pattern_gray_pkg.all;
 
+--==============================================================================
+-- Entity: pattern_grayscale_ramp
+--
+-- Purpose:
+--   Converts the horizontal pixel coordinate into one of the package-defined
+--   grayscale levels while video_on_i is asserted.
+--
+-- Interface groups:
+--   G_VGA_MODE selects horizontal active width; video_on_i qualifies the
+--   addressable pattern area; x_i is the current horizontal coordinate; rgb_o is
+--   the combinational grayscale result.
+--
+-- Output semantics:
+--   Inactive samples return the black grayscale level.
+--==============================================================================
 entity pattern_grayscale_ramp is
     generic (
         G_VGA_MODE : t_vga_mode := VGA_640X480_60
@@ -18,10 +58,13 @@ entity pattern_grayscale_ramp is
 end entity pattern_grayscale_ramp;
 
 architecture rtl of pattern_grayscale_ramp is
-    constant C_TIMING       : t_vga_timing := get_vga_timing(G_VGA_MODE);
-    constant C_ACTIVE_WIDTH : natural := C_TIMING.h_addr_video;
+    -- Elaborated timing constants determine how x_i maps into the 16 ramp bins.
+    constant C_TIMING       : t_vga_timing  := get_vga_timing(G_VGA_MODE);
+    constant C_ACTIVE_WIDTH : natural       := C_TIMING.h_addr_video;
 begin
 
+    -- Combinational ramp lookup. The arithmetic partitions the addressable width
+    -- into 16 bins before selecting one of the fixed grayscale constants.
     process(video_on_i, x_i)
         variable v_gray_index : natural range 0 to 15;
     begin

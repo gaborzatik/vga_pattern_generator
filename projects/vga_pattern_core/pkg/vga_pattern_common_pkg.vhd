@@ -1,15 +1,60 @@
+--==============================================================================
+-- File        : vga_pattern_common_pkg.vhd
+-- Project     : vga_pattern_core
+-- Unit        : vga_pattern_common_pkg
+--
+-- Description :
+--   Defines shared RGB, pattern-selection, and geometry helper abstractions used
+--   by the VGA pattern generator RTL and its simulation code.
+--
+-- Project role:
+--   This package is the common type and utility layer for pattern blocks, the
+--   top-level pattern multiplexer, and testbench expectations.
+--
+-- Design level:
+--   Package.
+--
+-- Clock/reset:
+--   Not applicable; this package contains declarations and pure helper logic.
+--
+-- Synthesis:
+--   Package declarations and synthesizable helper functions where used by RTL.
+--
+-- Review notes:
+--   The pattern enumeration includes implemented and not-yet-routed modes; the
+--   top-level generator decides which modes have dedicated RGB producers.
+--==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
+--==============================================================================
+-- Package: vga_pattern_common_pkg
+--
+-- Purpose:
+--   Provides project-wide RGB records, pattern-mode selectors, color constants,
+--   and coordinate helper functions.
+--
+-- Intended users:
+--   Pattern RTL blocks, the vga_pattern_generator selector, and simulation
+--   utilities that need the same selector encoding and color definitions.
+--
+-- Synthesis relevance:
+--   Constants and functions in this package may be elaborated into RTL when used
+--   in synthesizable files; assertions inside helper functions are reviewer
+--   visible behavior for invalid selector values.
+--==============================================================================
 package vga_pattern_common_pkg is
 
     -- =========================================================================
     -- Color types
     -- =========================================================================
 
+    -- Basys 3 VGA uses four bits per DAC color channel in this project.
     constant C_RGB_WIDTH : natural := 4;
 
+    -- Common per-channel and packed RGB record types keep pattern interfaces
+    -- consistent across combinational and future clocked pattern sources.
     subtype t_rgb_channel is std_logic_vector(C_RGB_WIDTH - 1 downto 0);
 
     type t_rgb_color is record
@@ -22,6 +67,9 @@ package vga_pattern_common_pkg is
     -- Pattern mode types
     -- =========================================================================
 
+    -- Selector order is hardware-visible through pattern_select_from_mode and
+    -- pattern_mode_from_select; append-only changes are easier to review than
+    -- reordering existing literals.
     type t_pattern_mode is (
         BLACK,
         WHITE,
@@ -71,6 +119,8 @@ package vga_pattern_common_pkg is
 
     type t_pattern_rgb_array is array (t_pattern_mode) of t_rgb_color;
 
+    -- Width calculations derive from the full enum, including modes that the
+    -- current top-level generator maps to its default color.
     constant C_PATTERN_COUNT : natural := t_pattern_mode'pos(t_pattern_mode'right) + 1;
 
     -- =========================================================================
@@ -81,36 +131,9 @@ package vga_pattern_common_pkg is
         value_count : natural
     ) return natural;
 
-    function max_channel_value
-        return natural;
 
-    function channel_from_level(
-        level : natural
-    ) return t_rgb_channel;
-
-    function channel_from_percent(
-        percent : natural
-    ) return t_rgb_channel;
-
-    function color_from_channels(
-        red   : t_rgb_channel;
-        green : t_rgb_channel;
-        blue  : t_rgb_channel
-    ) return t_rgb_color;
-
-    function gray_color_from_channel(
-        gray : t_rgb_channel
-    ) return t_rgb_color;
-
-    function gray_color_from_level(
-        level : natural
-    ) return t_rgb_color;
-
-    function gray_channel_from_position(
-        position      : unsigned;
-        active_length : natural
-    ) return t_rgb_channel;
-
+    -- Checker mode names identify which coordinate bit is sampled by the
+    -- top-level generator rather than configuring pattern_checker directly.
     type t_checker_pixel_mode is (
         CHECKER_PIXEL_1,
         CHECKER_PIXEL_2,
@@ -122,6 +145,8 @@ package vga_pattern_common_pkg is
     -- Selector types
     -- =========================================================================
 
+    -- Selector width follows the enum size and therefore changes if literals are
+    -- added to t_pattern_mode.
     constant C_PATTERN_SEL_WIDTH : natural := required_bit_width(C_PATTERN_COUNT);
 
     subtype t_pattern_sel_slv is std_logic_vector(C_PATTERN_SEL_WIDTH - 1 downto 0);
@@ -182,6 +207,8 @@ package vga_pattern_common_pkg is
     -- Coordinate / geometry helpers
     -- =========================================================================
 
+    -- Cell end arrays describe monotonically increasing coordinate thresholds
+    -- for partitioning a visible region into bars or similar cells.
     type t_cell_end_array is array (natural range <>) of natural;
 
     function pattern_mode_from_select(
@@ -192,16 +219,15 @@ package vga_pattern_common_pkg is
         mode : t_pattern_mode
     ) return t_pattern_sel_slv;
 
-    function cell_index_from_coordinate(
-        coord     : unsigned;
-        cell_ends : t_cell_end_array
-    ) return natural;
 
 end package vga_pattern_common_pkg;
 
 
 package body vga_pattern_common_pkg is
 
+    -- Computes the minimum selector width needed to encode value_count choices.
+    -- The value_count <= 1 case still returns one bit so downstream SLV ranges
+    -- remain legal.
     function required_bit_width(
         value_count : natural
     ) return natural is
@@ -220,111 +246,8 @@ package body vga_pattern_common_pkg is
         return v_bits;
     end function;
 
-    function max_channel_value
-        return natural is
-    begin
-        return (2 ** C_RGB_WIDTH) - 1;
-    end function;
-
-    function channel_from_level(
-        level : natural
-    ) return t_rgb_channel is
-        variable v_level : natural;
-    begin
-        if level > max_channel_value then
-            v_level := max_channel_value;
-        else
-            v_level := level;
-        end if;
-
-        return std_logic_vector(
-            to_unsigned(
-                v_level,
-                C_RGB_WIDTH
-            )
-        );
-    end function;
-
-    function channel_from_percent(
-        percent : natural
-    ) return t_rgb_channel is
-        variable v_percent : natural;
-        variable v_level   : natural;
-    begin
-        if percent > 100 then
-            v_percent := 100;
-        else
-            v_percent := percent;
-        end if;
-
-        v_level := (v_percent * max_channel_value + 50) / 100;
-
-        return channel_from_level(v_level);
-    end function;
-
-    function color_from_channels(
-        red   : t_rgb_channel;
-        green : t_rgb_channel;
-        blue  : t_rgb_channel
-    ) return t_rgb_color is
-    begin
-        return (
-            red   => red,
-            green => green,
-            blue  => blue
-        );
-    end function;
-
-    function gray_color_from_channel(
-        gray : t_rgb_channel
-    ) return t_rgb_color is
-    begin
-        return color_from_channels(
-            red   => gray,
-            green => gray,
-            blue  => gray
-        );
-    end function;
-
-    function gray_color_from_level(
-        level : natural
-    ) return t_rgb_color is
-    begin
-        return gray_color_from_channel(
-            channel_from_level(level)
-        );
-    end function;
-
-    function gray_color_from_percent(
-        percent : natural
-    ) return t_rgb_color is
-    begin
-        return gray_color_from_channel(
-            channel_from_percent(percent)
-        );
-    end function;
-
-    function gray_channel_from_position(
-        position      : unsigned;
-        active_length : natural
-    ) return t_rgb_channel is
-        variable v_level : natural;
-    begin
-        if active_length <= 1 then
-            return channel_from_level(0);
-        elsif to_integer(position) >= active_length then
-            return channel_from_level(max_channel_value);
-        else
-            v_level := (to_integer(position) * (max_channel_value + 1)) / active_length;
-    
-            if v_level > max_channel_value then
-                v_level := max_channel_value;
-            end if;
-    
-            return channel_from_level(v_level);
-        end if;
-    end function;
-
+    -- Decodes the hardware selector vector into the enum. Invalid encodings
+    -- intentionally fall back to BLACK after reporting a warning.
     function pattern_mode_from_select(
         sel : t_pattern_sel_slv
     ) return t_pattern_mode is
@@ -342,6 +265,8 @@ package body vga_pattern_common_pkg is
         end if;
     end function;
 
+    -- Encodes a pattern enum literal into the selector vector width used by the
+    -- top-level pattern generator input.
     function pattern_select_from_mode(
         mode : t_pattern_mode
     ) return t_pattern_sel_slv is
@@ -354,19 +279,5 @@ package body vga_pattern_common_pkg is
         );
     end function;
 
-    function cell_index_from_coordinate(
-        coord     : unsigned;
-        cell_ends : t_cell_end_array
-    ) return natural is
-    begin
-        for i in cell_ends'range loop
-            if coord < to_unsigned(cell_ends(i), coord'length) then
-                return i;
-            end if;
-        end loop;
-
-        -- No matching cell found; return one-past-the-last valid index.
-        return cell_ends'length;
-    end function;
 
 end package body vga_pattern_common_pkg;
