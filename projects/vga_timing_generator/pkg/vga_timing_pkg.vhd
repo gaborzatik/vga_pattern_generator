@@ -82,6 +82,11 @@ package vga_timing_pkg is
     function get_v_addr_end(
         timing : t_vga_timing
     ) return natural;
+
+    function f_sync_output_level(
+        sync_active : boolean;
+        polarity    : t_sync_polarity
+    ) return std_logic;
     
     function get_x_coord_width(
     mode : t_vga_mode
@@ -279,6 +284,28 @@ package body vga_timing_pkg is
                timing.v_back_porch +
                timing.v_top_border +
                timing.v_addr_video;
+    end function;
+
+    function f_sync_output_level(
+        sync_active : boolean;
+        polarity    : t_sync_polarity
+    ) return std_logic is
+    begin
+        case polarity is
+            when ACTIVE_HIGH =>
+                if sync_active then
+                    return '1';
+                else
+                    return '0';
+                end if;
+
+            when ACTIVE_LOW =>
+                if sync_active then
+                    return '0';
+                else
+                    return '1';
+                end if;
+        end case;
     end function;
 
     function get_x_coord_width(

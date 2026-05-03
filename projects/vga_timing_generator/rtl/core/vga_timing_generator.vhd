@@ -67,28 +67,6 @@ architecture rtl of vga_timing_generator is
     signal active_video_s     : std_logic;
     signal video_on_s         : std_logic;
 
-    function f_sync_output_level(
-        sync_active : boolean;
-        polarity    : t_sync_polarity
-    ) return std_logic is
-    begin
-        case polarity is
-            when ACTIVE_HIGH =>
-                if sync_active then
-                    return '1';
-                else
-                    return '0';
-                end if;
-
-            when ACTIVE_LOW =>
-                if sync_active then
-                    return '0';
-                else
-                    return '1';
-                end if;
-        end case;
-    end function;
-
 begin
 
     assert C_H_TOTAL =
