@@ -21,22 +21,22 @@ architecture sim of tb_vga_timing_generator_modes is
     signal vga_vsync_s    : std_logic;
     signal vga_active_s   : std_logic;
     signal vga_video_s    : std_logic;
-    signal vga_x_s        : unsigned(get_x_coord_width(VGA_640X480_60) - 1 downto 0);
-    signal vga_y_s        : unsigned(get_y_coord_width(VGA_640X480_60) - 1 downto 0);
+    signal vga_x_s        : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+    signal vga_y_s        : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
     signal svga_hsync_s   : std_logic;
     signal svga_vsync_s   : std_logic;
     signal svga_active_s  : std_logic;
     signal svga_video_s   : std_logic;
-    signal svga_x_s       : unsigned(get_x_coord_width(SVGA_800X600_60) - 1 downto 0);
-    signal svga_y_s       : unsigned(get_y_coord_width(SVGA_800X600_60) - 1 downto 0);
+    signal svga_x_s       : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+    signal svga_y_s       : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
     signal xga_hsync_s    : std_logic;
     signal xga_vsync_s    : std_logic;
     signal xga_active_s   : std_logic;
     signal xga_video_s    : std_logic;
-    signal xga_x_s        : unsigned(get_x_coord_width(XGA_1024X768_60) - 1 downto 0);
-    signal xga_y_s        : unsigned(get_y_coord_width(XGA_1024X768_60) - 1 downto 0);
+    signal xga_x_s        : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+    signal xga_y_s        : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
     signal vga_done_s     : std_logic := '0';
     signal svga_done_s    : std_logic := '0';
@@ -159,12 +159,10 @@ begin
     pixel_clk_s <= not pixel_clk_s after C_CLK_PERIOD / 2;
 
     dut_vga : entity work.vga_timing_generator
-        generic map (
-            G_VGA_MODE => VGA_640X480_60
-        )
         port map (
             pixel_clk_i    => pixel_clk_s,
             sync_pos_rst_i => sync_pos_rst_s,
+            vga_mode_i     => VGA_640X480_60,
             hsync_o        => vga_hsync_s,
             vsync_o        => vga_vsync_s,
             active_video_o => vga_active_s,
@@ -174,12 +172,10 @@ begin
         );
 
     dut_svga : entity work.vga_timing_generator
-        generic map (
-            G_VGA_MODE => SVGA_800X600_60
-        )
         port map (
             pixel_clk_i    => pixel_clk_s,
             sync_pos_rst_i => sync_pos_rst_s,
+            vga_mode_i     => SVGA_800X600_60,
             hsync_o        => svga_hsync_s,
             vsync_o        => svga_vsync_s,
             active_video_o => svga_active_s,
@@ -189,12 +185,10 @@ begin
         );
 
     dut_xga : entity work.vga_timing_generator
-        generic map (
-            G_VGA_MODE => XGA_1024X768_60
-        )
         port map (
             pixel_clk_i    => pixel_clk_s,
             sync_pos_rst_i => sync_pos_rst_s,
+            vga_mode_i     => XGA_1024X768_60,
             hsync_o        => xga_hsync_s,
             vsync_o        => xga_vsync_s,
             active_video_o => xga_active_s,

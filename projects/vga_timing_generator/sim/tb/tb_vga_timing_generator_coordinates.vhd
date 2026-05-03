@@ -28,20 +28,18 @@ architecture sim of tb_vga_timing_generator_coordinates is
     signal vsync_s              : std_logic;
     signal active_video_s       : std_logic;
     signal video_on_s           : std_logic;
-    signal x_s                  : unsigned(get_x_coord_width(C_MODE) - 1 downto 0);
-    signal y_s                  : unsigned(get_y_coord_width(C_MODE) - 1 downto 0);
+    signal x_s                  : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+    signal y_s                  : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
 begin
 
     pixel_clk_s <= not pixel_clk_s after C_CLK_PERIOD / 2;
 
     dut : entity work.vga_timing_generator
-        generic map (
-            G_VGA_MODE => C_MODE
-        )
         port map (
             pixel_clk_i    => pixel_clk_s,
             sync_pos_rst_i => sync_pos_rst_s,
+            vga_mode_i     => C_MODE,
             hsync_o        => hsync_s,
             vsync_o        => vsync_s,
             active_video_o => active_video_s,
