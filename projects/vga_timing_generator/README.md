@@ -62,7 +62,7 @@ The package currently defines the following modes:
 
 The module does not generate the pixel clock internally. It expects
 `pixel_clk_i` to already run at the correct frequency for the selected
-`vga_mode_i`.
+runtime `mode_i`.
 
 ## RTL interface
 
@@ -74,9 +74,12 @@ Inputs:
   Pixel clock for the selected mode
 - `sync_pos_rst_i`
   Synchronous active-high reset for the timing counters
-- `vga_mode_i`
+- `mode_i`
   Selects the timing preset from `t_vga_mode`; the input can be changed at run
   time when the surrounding design also switches to the matching pixel clock
+- `hold_i`
+  Holds the timing core in a deterministic blank/idle state while a wrapper
+  performs a runtime mode and pixel-clock switch
 
 Outputs:
 
@@ -95,8 +98,17 @@ Outputs:
 - `y_o`
   Zero-based Y coordinate inside the addressable region, sized to the maximum
   supported coordinate width
+- `mode_switch_safe_o`
+  One-pixel-clock pulse at frame origin (`h_count = 0`, `v_count = 0`) while
+  not held. This signal is for pixel-domain consumers only.
+- `hold_active_o`
+  Mirrors `hold_i` for optional local observation
 
-When `video_on_o = '0'`, both coordinate outputs are driven to zero.
+When `video_on_o = '0'`, both coordinate outputs are driven to zero. While
+`hold_i = '1'`, `hsync_o` and `vsync_o` are driven to the selected mode's idle
+polarity, `active_video_o` and `video_on_o` are low, and both coordinates are
+zero. On release, the first non-held pixel cycle is a frame-origin safe cycle
+before normal counting resumes.
 
 ## Design behavior
 

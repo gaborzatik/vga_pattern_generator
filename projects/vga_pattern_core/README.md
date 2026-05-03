@@ -49,7 +49,7 @@ There is currently no committed XDC constraints file in this subproject.
 - `rtl/pattern/pattern_seven_bars.vhd` outputs a seven-bar color pattern
 - `rtl/pattern/pattern_grayscale_ramp.vhd` outputs a stepped grayscale ramp
 - `rtl/pattern/pattern_1pixel_border.vhd` outputs a one-pixel green border on
-  the active image edges
+  the active image edges using runtime `mode_i` geometry
 - `rtl/pattern/pattern_checker.vhd` outputs checkerboard patterns selected by
   checker cell size
 - `vivado/create_project.tcl` recreates the minimal Vivado project and sets
@@ -107,27 +107,21 @@ paths where a compact channel width is enough.
 
 Entity: `vga_pattern_generator`
 
-Generics:
-
-- `G_X_WIDTH`
-  Bit width of the horizontal coordinate input
-- `G_Y_WIDTH`
-  Bit width of the vertical coordinate input
-- `G_ACTIVE_WIDTH`
-  Intended active horizontal resolution
-- `G_ACTIVE_HEIGHT`
-  Intended active vertical resolution
-
 Inputs:
 
 - `pattern_sel_i`
   Encoded pattern selector value
+- `mode_i`
+  Runtime VGA mode shared with the timing generator. Geometry-sensitive
+  patterns use this to derive active width and height.
 - `video_on_i`
   Active-video qualifier from the timing generator
 - `x_i`
-  Zero-based pixel X coordinate inside the addressable region
+  Zero-based pixel X coordinate inside the addressable region, sized to the
+  maximum supported coordinate width
 - `y_i`
-  Zero-based pixel Y coordinate inside the addressable region
+  Zero-based pixel Y coordinate inside the addressable region, sized to the
+  maximum supported coordinate width
 
 Outputs:
 
@@ -158,12 +152,12 @@ easy to add more patterns later by extending the array mapping.
 - `pattern_solid_black` outputs black unconditionally.
 - `pattern_checker` derives checker size directly from coordinate bits, which
   keeps it compact and synthesizable.
-- `pattern_1pixel_border` compares `x_i` and `y_i` against the active-image
-  limits for the selected VGA mode, so the border stays one pixel wide across
-  the supported resolutions.
-- `pattern_seven_bars` and `pattern_grayscale_ramp` are currently written with
-  `640` active pixels in mind, as indicated by both the case ranges and the
-  comments in the source.
+- `pattern_1pixel_border` compares `x_i` and `y_i` against runtime `mode_i`
+  active-image limits, so the border stays one pixel wide across the supported
+  resolutions.
+- `pattern_seven_bars` and `pattern_grayscale_ramp` derive their horizontal
+  bins from runtime `mode_i`, so the same pattern pipeline supports
+  640, 800, and 1024 active-pixel widths.
 - The selector bus width is derived automatically from the full
   `t_pattern_mode` enumeration, not only from the subset that is currently
   implemented.

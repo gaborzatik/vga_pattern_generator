@@ -17,6 +17,7 @@ set wrapper_design_files [list \
     [file join $project_root rtl reset_controller.vhd] \
     [file join $project_root rtl uart_rx_8n1.vhd] \
     [file join $project_root rtl vga_uart_control.vhd] \
+    [file join $project_root rtl vga_mode_switch_controller.vhd] \
     [file join $project_root rtl basys3_vga_top.vhd] \
 ]
 

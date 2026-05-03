@@ -50,17 +50,15 @@ end entity tb_vga_pattern_generator_selectors;
 
 architecture sim of tb_vga_pattern_generator_selectors is
 
-    -- Test geometry matches the default VGA mode used by the DUT generics.
+    -- Test geometry uses the runtime VGA mode supplied to the DUT.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
-    constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
-    constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
     constant C_ACTIVE_WIDTH  : natural := get_vga_timing(C_MODE).h_addr_video;
     constant C_ACTIVE_HEIGHT : natural := get_vga_timing(C_MODE).v_addr_video;
 
     signal pattern_sel_s     : t_pattern_sel_slv := (others => '0');
     signal video_on_s        : std_logic := '0';
-    signal x_s               : unsigned(C_X_WIDTH - 1 downto 0) := (others => '0');
-    signal y_s               : unsigned(C_Y_WIDTH - 1 downto 0) := (others => '0');
+    signal x_s               : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0) := (others => '0');
+    signal y_s               : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0) := (others => '0');
     signal red_s             : t_rgb_channel;
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
@@ -103,15 +101,9 @@ begin
     -- Device under test: the full pattern generator is used so selector decoding,
     -- pattern production, and the enum-indexed RGB mux are checked together.
     dut : entity work.vga_pattern_generator
-        generic map (
-            G_VGA_MODE      => C_MODE,
-            G_X_WIDTH       => C_X_WIDTH,
-            G_Y_WIDTH       => C_Y_WIDTH,
-            G_ACTIVE_WIDTH  => C_ACTIVE_WIDTH,
-            G_ACTIVE_HEIGHT => C_ACTIVE_HEIGHT
-        )
         port map (
             pattern_sel_i => pattern_sel_s,
+            mode_i        => C_MODE,
             video_on_i    => video_on_s,
             x_i           => x_s,
             y_i           => y_s,

@@ -37,9 +37,6 @@ begin
     clk_100mhz_s <= not clk_100mhz_s after C_CLK_PERIOD / 2;
 
     dut : entity work.basys3_vga_top
-        generic map (
-            G_VGA_MODE => C_MODE
-        )
         port map (
             clk_100mhz_i => clk_100mhz_s,
             btnc_i       => btnc_s,
@@ -96,6 +93,55 @@ begin
                 expected     => expected,
                 message      => message
             );
+        end procedure;
+
+        procedure wait_for_hsync_low_width(
+            constant expected_width : in natural;
+            constant message        : in string
+        ) is
+            variable low_width_v : natural := 0;
+            variable saw_high_v  : boolean := false;
+            variable saw_low_v   : boolean := false;
+            variable matched_v   : boolean := false;
+        begin
+            for attempt in 1 to 3 loop
+                saw_high_v := false;
+                saw_low_v  := false;
+
+                for i in 1 to C_H_TOTAL * get_v_total(C_TIMING) * 2 loop
+                    wait until rising_edge(clk_100mhz_s);
+
+                    if vga_hsync_s = '1' then
+                        saw_high_v := true;
+                    elsif saw_high_v then
+                        saw_low_v := true;
+                        exit;
+                    end if;
+                end loop;
+
+                assert saw_low_v
+                    report message & " Did not observe an hsync active edge."
+                    severity failure;
+
+                low_width_v := 1;
+                while vga_hsync_s = '0' loop
+                    wait until rising_edge(clk_100mhz_s);
+                    if vga_hsync_s = '0' then
+                        low_width_v := low_width_v + 1;
+                    end if;
+                end loop;
+
+                if low_width_v = expected_width then
+                    matched_v := true;
+                    exit;
+                end if;
+            end loop;
+
+            assert matched_v
+                report message &
+                       " Expected hsync low width " & integer'image(expected_width) &
+                       ", got " & integer'image(low_width_v) & "."
+                severity failure;
         end procedure;
     begin
         wait until rising_edge(clk_100mhz_s);
@@ -171,6 +217,16 @@ begin
         wait_for_rgb(
             expected => C_RGB_BLUE,
             message  => "Wrapper did not propagate a selector change to BLUE."
+        );
+
+        send_uart_byte(
+            rx_line => uart_rx_s,
+            data    => "01" & "000000"
+        );
+
+        wait_for_hsync_low_width(
+            expected_width => get_vga_timing(VGA_640X480_60).h_sync,
+            message        => "Wrapper did not restart timing in VGA_640X480_60 after UART mode command."
         );
 
         report "tb_basys3_vga_top_smoke completed successfully."

@@ -20,8 +20,8 @@
 --   Synthesizable combinational RTL.
 --
 -- Review notes:
---   The ramp uses G_VGA_MODE timing geometry, so x_i is expected to be aligned
---   with the same mode's addressable coordinate range.
+--   The ramp uses runtime mode_i timing geometry, so x_i is expected to be
+--   aligned with the same mode's addressable coordinate range.
 --==============================================================================
 library ieee;
 use ieee.std_logic_1164.all;
@@ -39,7 +39,7 @@ use work.vga_pattern_gray_pkg.all;
 --   grayscale levels while video_on_i is asserted.
 --
 -- Interface groups:
---   G_VGA_MODE selects horizontal active width; video_on_i qualifies the
+--   mode_i selects horizontal active width; video_on_i qualifies the
 --   addressable pattern area; x_i is the current horizontal coordinate; rgb_o is
 --   the combinational grayscale result.
 --
@@ -47,29 +47,78 @@ use work.vga_pattern_gray_pkg.all;
 --   Inactive samples return the black grayscale level.
 --==============================================================================
 entity pattern_grayscale_ramp is
-    generic (
-        G_VGA_MODE : t_vga_mode := VGA_640X480_60
-    );
     port (
         video_on_i : in  std_logic;
-        x_i        : in  unsigned(get_x_coord_width(G_VGA_MODE) - 1 downto 0);
+        mode_i     : in  t_vga_mode;
+        x_i        : in  unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
         rgb_o      : out t_rgb_color
     );
 end entity pattern_grayscale_ramp;
 
 architecture rtl of pattern_grayscale_ramp is
-    -- Elaborated timing constants determine how x_i maps into the 16 ramp bins.
-    constant C_TIMING       : t_vga_timing  := get_vga_timing(G_VGA_MODE);
-    constant C_ACTIVE_WIDTH : natural       := C_TIMING.h_addr_video;
+    function f_gray_index_from_step(
+        constant x_value : natural;
+        constant step    : natural
+    ) return natural is
+    begin
+        if x_value < step then
+            return 0;
+        elsif x_value < step * 2 then
+            return 1;
+        elsif x_value < step * 3 then
+            return 2;
+        elsif x_value < step * 4 then
+            return 3;
+        elsif x_value < step * 5 then
+            return 4;
+        elsif x_value < step * 6 then
+            return 5;
+        elsif x_value < step * 7 then
+            return 6;
+        elsif x_value < step * 8 then
+            return 7;
+        elsif x_value < step * 9 then
+            return 8;
+        elsif x_value < step * 10 then
+            return 9;
+        elsif x_value < step * 11 then
+            return 10;
+        elsif x_value < step * 12 then
+            return 11;
+        elsif x_value < step * 13 then
+            return 12;
+        elsif x_value < step * 14 then
+            return 13;
+        elsif x_value < step * 15 then
+            return 14;
+        else
+            return 15;
+        end if;
+    end function;
+
+    function f_gray_index(
+        constant mode    : t_vga_mode;
+        constant x_value : natural
+    ) return natural is
+    begin
+        case mode is
+            when VGA_640X480_60 =>
+                return f_gray_index_from_step(x_value, 40);
+            when SVGA_800X600_60 =>
+                return f_gray_index_from_step(x_value, 50);
+            when XGA_1024X768_60 =>
+                return f_gray_index_from_step(x_value, 64);
+        end case;
+    end function;
 begin
 
-    -- Combinational ramp lookup. The arithmetic partitions the addressable width
-    -- into 16 bins before selecting one of the fixed grayscale constants.
-    process(video_on_i, x_i)
+    -- Combinational ramp lookup. All supported active widths divide evenly into
+    -- 16 bins, so fixed thresholds avoid a runtime divider.
+    process(video_on_i, mode_i, x_i)
         variable v_gray_index : natural range 0 to 15;
     begin
         if video_on_i = '1' then
-            v_gray_index := (to_integer(x_i) * 16) / C_ACTIVE_WIDTH;
+            v_gray_index := f_gray_index(mode_i, to_integer(x_i));
 
             case v_gray_index is
                 when 0 =>

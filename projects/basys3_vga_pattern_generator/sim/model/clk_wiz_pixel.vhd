@@ -5,6 +5,10 @@ use ieee.numeric_std.all;
 entity clk_wiz_pixel is
     port (
         clk_out1 : out std_logic;
+        clk_out2 : out std_logic;
+        clk_out3 : out std_logic;
+        clkfb_out : out std_logic;
+        clkfb_in  : in  std_logic;
         reset    : in  std_logic;
         locked   : out std_logic;
         clk_in1  : in  std_logic
@@ -17,6 +21,9 @@ architecture sim of clk_wiz_pixel is
 begin
 
     clk_out1 <= clk_in1;
+    clk_out2 <= clk_in1;
+    clk_out3 <= clk_in1;
+    clkfb_out <= clk_in1;
     locked   <= locked_s;
 
     process(clk_in1, reset)

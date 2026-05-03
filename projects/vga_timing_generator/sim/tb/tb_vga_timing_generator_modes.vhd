@@ -23,6 +23,7 @@ architecture sim of tb_vga_timing_generator_modes is
     signal vga_video_s    : std_logic;
     signal vga_x_s        : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal vga_y_s        : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
+    signal vga_safe_s     : std_logic;
 
     signal svga_hsync_s   : std_logic;
     signal svga_vsync_s   : std_logic;
@@ -30,6 +31,7 @@ architecture sim of tb_vga_timing_generator_modes is
     signal svga_video_s   : std_logic;
     signal svga_x_s       : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal svga_y_s       : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
+    signal svga_safe_s    : std_logic;
 
     signal xga_hsync_s    : std_logic;
     signal xga_vsync_s    : std_logic;
@@ -37,6 +39,7 @@ architecture sim of tb_vga_timing_generator_modes is
     signal xga_video_s    : std_logic;
     signal xga_x_s        : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal xga_y_s        : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
+    signal xga_safe_s     : std_logic;
 
     signal vga_done_s     : std_logic := '0';
     signal svga_done_s    : std_logic := '0';
@@ -51,7 +54,8 @@ architecture sim of tb_vga_timing_generator_modes is
         signal active_o     : in std_logic;
         signal video_o      : in std_logic;
         signal x_o          : in unsigned;
-        signal y_o          : in unsigned
+        signal y_o          : in unsigned;
+        signal safe_o       : in std_logic
     ) is
         constant C_TIMING         : t_vga_timing := get_vga_timing(mode);
         constant C_H_TOTAL        : natural := get_h_total(C_TIMING);
@@ -73,21 +77,10 @@ architecture sim of tb_vga_timing_generator_modes is
         variable exp_y_v          : natural;
         variable exp_active_sl_v  : std_logic;
         variable exp_video_sl_v   : std_logic;
+        variable exp_safe_sl_v    : std_logic;
     begin
         for cycle in 1 to C_H_TOTAL * C_V_TOTAL loop
             wait until rising_edge(clk);
-
-            if exp_h_count_v = C_H_TOTAL - 1 then
-                exp_h_count_v := 0;
-
-                if exp_v_count_v = C_V_TOTAL - 1 then
-                    exp_v_count_v := 0;
-                else
-                    exp_v_count_v := exp_v_count_v + 1;
-                end if;
-            else
-                exp_h_count_v := exp_h_count_v + 1;
-            end if;
 
             exp_active_v :=
                 (exp_h_count_v >= C_H_ACTIVE_START) and
@@ -121,6 +114,12 @@ architecture sim of tb_vga_timing_generator_modes is
                 exp_video_sl_v := '0';
             end if;
 
+            if (exp_h_count_v = 0) and (exp_v_count_v = 0) then
+                exp_safe_sl_v := '1';
+            else
+                exp_safe_sl_v := '0';
+            end if;
+
             assert_std_logic_equal(
                 actual   => hsync_o,
                 expected => expected_sync_level(exp_h_count_v < C_TIMING.h_sync, C_TIMING.h_polarity),
@@ -151,6 +150,23 @@ architecture sim of tb_vga_timing_generator_modes is
                 expected => exp_y_v,
                 message  => mode_name & ": y_o mismatch."
             );
+            assert_std_logic_equal(
+                actual   => safe_o,
+                expected => exp_safe_sl_v,
+                message  => mode_name & ": mode_switch_safe_o mismatch."
+            );
+
+            if exp_h_count_v = C_H_TOTAL - 1 then
+                exp_h_count_v := 0;
+
+                if exp_v_count_v = C_V_TOTAL - 1 then
+                    exp_v_count_v := 0;
+                else
+                    exp_v_count_v := exp_v_count_v + 1;
+                end if;
+            else
+                exp_h_count_v := exp_h_count_v + 1;
+            end if;
         end loop;
     end procedure;
 
@@ -160,41 +176,50 @@ begin
 
     dut_vga : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => sync_pos_rst_s,
-            vga_mode_i     => VGA_640X480_60,
-            hsync_o        => vga_hsync_s,
-            vsync_o        => vga_vsync_s,
-            active_video_o => vga_active_s,
-            video_on_o     => vga_video_s,
-            x_o            => vga_x_s,
-            y_o            => vga_y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => sync_pos_rst_s,
+            mode_i             => VGA_640X480_60,
+            hold_i             => '0',
+            hsync_o            => vga_hsync_s,
+            vsync_o            => vga_vsync_s,
+            active_video_o     => vga_active_s,
+            video_on_o         => vga_video_s,
+            x_o                => vga_x_s,
+            y_o                => vga_y_s,
+            mode_switch_safe_o => vga_safe_s,
+            hold_active_o      => open
         );
 
     dut_svga : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => sync_pos_rst_s,
-            vga_mode_i     => SVGA_800X600_60,
-            hsync_o        => svga_hsync_s,
-            vsync_o        => svga_vsync_s,
-            active_video_o => svga_active_s,
-            video_on_o     => svga_video_s,
-            x_o            => svga_x_s,
-            y_o            => svga_y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => sync_pos_rst_s,
+            mode_i             => SVGA_800X600_60,
+            hold_i             => '0',
+            hsync_o            => svga_hsync_s,
+            vsync_o            => svga_vsync_s,
+            active_video_o     => svga_active_s,
+            video_on_o         => svga_video_s,
+            x_o                => svga_x_s,
+            y_o                => svga_y_s,
+            mode_switch_safe_o => svga_safe_s,
+            hold_active_o      => open
         );
 
     dut_xga : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => sync_pos_rst_s,
-            vga_mode_i     => XGA_1024X768_60,
-            hsync_o        => xga_hsync_s,
-            vsync_o        => xga_vsync_s,
-            active_video_o => xga_active_s,
-            video_on_o     => xga_video_s,
-            x_o            => xga_x_s,
-            y_o            => xga_y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => sync_pos_rst_s,
+            mode_i             => XGA_1024X768_60,
+            hold_i             => '0',
+            hsync_o            => xga_hsync_s,
+            vsync_o            => xga_vsync_s,
+            active_video_o     => xga_active_s,
+            video_on_o         => xga_video_s,
+            x_o                => xga_x_s,
+            y_o                => xga_y_s,
+            mode_switch_safe_o => xga_safe_s,
+            hold_active_o      => open
         );
 
     control : process
@@ -217,7 +242,8 @@ begin
             active_o  => vga_active_s,
             video_o   => vga_video_s,
             x_o       => vga_x_s,
-            y_o       => vga_y_s
+            y_o       => vga_y_s,
+            safe_o    => vga_safe_s
         );
         vga_done_s <= '1';
         wait;
@@ -235,7 +261,8 @@ begin
             active_o  => svga_active_s,
             video_o   => svga_video_s,
             x_o       => svga_x_s,
-            y_o       => svga_y_s
+            y_o       => svga_y_s,
+            safe_o    => svga_safe_s
         );
         svga_done_s <= '1';
         wait;
@@ -253,7 +280,8 @@ begin
             active_o  => xga_active_s,
             video_o   => xga_video_s,
             x_o       => xga_x_s,
-            y_o       => xga_y_s
+            y_o       => xga_y_s,
+            safe_o    => xga_safe_s
         );
         xga_done_s <= '1';
         wait;

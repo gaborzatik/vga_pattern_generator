@@ -3,6 +3,16 @@ set_property PACKAGE_PIN W5 [get_ports clk_100mhz_i]
 set_property IOSTANDARD LVCMOS33 [get_ports clk_100mhz_i]
 create_clock -period 10.000 -name clk_100mhz_i [get_ports clk_100mhz_i]
 
+## Runtime pixel clocks from the three-output Clocking Wizard and the
+## dedicated two-stage BUFGMUX_CTRL tree are intentionally left for Vivado to
+## derive from the Clocking Wizard/MMCM and clock mux primitives. The three
+## MMCM output clocks feed a dedicated clock mux tree, so only one runtime pixel
+## clock is active in the pixel pipeline at a time.
+set_clock_groups -logically_exclusive \
+    -group [get_clocks -quiet pixel_clk_vga_s] \
+    -group [get_clocks -quiet pixel_clk_svga_s] \
+    -group [get_clocks -quiet pixel_clk_xga_s]
+
 ## Button
 set_property PACKAGE_PIN U18 [get_ports btnc_i]
 set_property IOSTANDARD LVCMOS33 [get_ports btnc_i]

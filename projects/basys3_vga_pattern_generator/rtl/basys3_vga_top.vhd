@@ -9,9 +9,6 @@ use work.vga_timing_pkg.all;
 use work.vga_pattern_common_pkg.all;
 
 entity basys3_vga_top is
-    generic (
-        G_VGA_MODE : t_vga_mode := XGA_1024X768_60
-    );
     port (
         clk_100mhz_i : in  std_logic;
         btnc_i       : in  std_logic;
@@ -27,42 +24,51 @@ end entity basys3_vga_top;
 
 architecture rtl of basys3_vga_top is
 
-    -- Current pixel clock: 65 MHz for the default XGA_1024X768_60 mode.
-    -- TODO: replace the single clock with runtime clock selection for the
-    -- currently supported VGA modes.
     component clk_wiz_pixel
         port (
-            clk_out1 : out std_logic;
+            clk_out1 : out std_logic; -- VGA_640X480_60, 25.175 MHz
+            clk_out2 : out std_logic; -- SVGA_800X600_60, 40.000 MHz
+            clk_out3 : out std_logic; -- XGA_1024X768_60, 65.000 MHz
+            clkfb_out : out std_logic;
+            clkfb_in  : in  std_logic;
             reset    : in  std_logic;
             locked   : out std_logic;
             clk_in1  : in  std_logic
         );
     end component;
 
-    constant C_TIMING        : t_vga_timing := get_vga_timing(G_VGA_MODE);
-    constant C_X_WIDTH       : natural := get_x_coord_width(G_VGA_MODE);
-    constant C_Y_WIDTH       : natural := get_y_coord_width(G_VGA_MODE);
-    constant C_ACTIVE_WIDTH  : natural := C_TIMING.h_addr_video;
-    constant C_ACTIVE_HEIGHT : natural := C_TIMING.v_addr_video;
-
     signal clk_100mhz_ibuf_s : std_logic;
     signal sys_clk_s         : std_logic;
+    signal pixel_clk_vga_s   : std_logic;
+    signal pixel_clk_svga_s  : std_logic;
+    signal pixel_clk_xga_s   : std_logic;
+    signal pixel_clk_low_s   : std_logic;
     signal pixel_clk_s       : std_logic;
+    signal clk_wiz_feedback_s : std_logic;
     signal clk_locked_s      : std_logic;
     signal clk_wiz_reset_s   : std_logic;
     signal sys_rst_s         : std_logic;
     signal pixel_rst_s       : std_logic;
 
+    signal mux_low_sel_s     : std_logic;
+    signal mux_xga_sel_s     : std_logic;
+
     signal hsync_s           : std_logic;
     signal vsync_s           : std_logic;
     signal video_on_s        : std_logic;
+    signal mode_safe_s       : std_logic;
+    signal pixel_hold_s      : std_logic;
 
-    signal vga_mode_s        : t_vga_mode := G_VGA_MODE;
+    signal active_mode_s     : t_vga_mode := XGA_1024X768_60;
+    signal mode_busy_s       : std_logic;
+
     signal x_s               : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal y_s               : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
     signal pattern_sel_ctrl_s : t_pattern_sel_slv;
     signal pattern_sel_valid_ctrl_s : std_logic;
+    signal mode_cmd_payload_s : std_logic_vector(5 downto 0);
+    signal mode_cmd_valid_s   : std_logic;
     signal pattern_sel_cdc_ready_s : std_logic;
     signal pattern_sel_transfer_valid_s : std_logic := '0';
     signal pattern_sel_transfer_data_s : t_pattern_sel_slv := pattern_select_from_mode(BLACK);
@@ -98,6 +104,34 @@ begin
             O => sys_clk_s
         );
 
+    u_clk_wiz_pixel : clk_wiz_pixel
+        port map (
+            clk_out1 => pixel_clk_vga_s,
+            clk_out2 => pixel_clk_svga_s,
+            clk_out3 => pixel_clk_xga_s,
+            clkfb_out => clk_wiz_feedback_s,
+            clkfb_in  => clk_wiz_feedback_s,
+            reset    => clk_wiz_reset_s,
+            locked   => clk_locked_s,
+            clk_in1  => sys_clk_s
+        );
+
+    u_pixel_clk_mux_low : BUFGMUX_CTRL
+        port map (
+            I0 => pixel_clk_vga_s,
+            I1 => pixel_clk_svga_s,
+            S  => mux_low_sel_s,
+            O  => pixel_clk_low_s
+        );
+
+    u_pixel_clk_mux_top : BUFGMUX_CTRL
+        port map (
+            I0 => pixel_clk_low_s,
+            I1 => pixel_clk_xga_s,
+            S  => mux_xga_sel_s,
+            O  => pixel_clk_s
+        );
+
     u_reset_controller : entity work.reset_controller
         port map (
             sys_clk_i          => sys_clk_s,
@@ -107,14 +141,6 @@ begin
             clk_wiz_reset_o    => clk_wiz_reset_s,
             sys_rst_o          => sys_rst_s,
             pixel_rst_o        => pixel_rst_s
-        );
-
-    u_clk_wiz_pixel : clk_wiz_pixel
-        port map (
-            clk_out1 => pixel_clk_s,
-            reset    => clk_wiz_reset_s,
-            locked   => clk_locked_s,
-            clk_in1  => sys_clk_s
         );
 
     u_vga_uart_control : entity work.vga_uart_control
@@ -128,9 +154,31 @@ begin
             uart_rx_i          => uart_rx_i,
             pattern_sel_o      => pattern_sel_ctrl_s,
             pattern_sel_valid_o => pattern_sel_valid_ctrl_s,
-            clock_sel_o        => open,
-            clock_sel_valid_o  => open,
+            clock_sel_o        => mode_cmd_payload_s,
+            clock_sel_valid_o  => mode_cmd_valid_s,
             uart_frame_error_o => open
+        );
+
+    u_mode_switch_controller : entity work.vga_mode_switch_controller
+        generic map (
+            G_CLOCK_MUX_SETTLE_CYCLES => 256
+        )
+        port map (
+            sys_clk_i          => sys_clk_s,
+            sys_rst_i          => sys_rst_s,
+            pixel_clk_i        => pixel_clk_s,
+            pixel_rst_i        => pixel_rst_s,
+            mode_cmd_valid_i   => mode_cmd_valid_s,
+            mode_cmd_payload_i => mode_cmd_payload_s,
+            clock_locked_i     => clk_locked_s,
+            mode_switch_safe_i => mode_safe_s,
+            busy_o             => mode_busy_s,
+            pixel_hold_o       => pixel_hold_s,
+            requested_mode_o   => open,
+            current_mode_o     => open,
+            active_mode_o      => active_mode_s,
+            mux_low_sel_o      => mux_low_sel_s,
+            mux_xga_sel_o      => mux_xga_sel_s
         );
 
     p_pattern_sel_pending : process(sys_clk_s)
@@ -154,7 +202,7 @@ begin
                     next_pending_v       := pattern_sel_ctrl_s;
                 end if;
 
-                if next_pending_valid_v = '1' and pattern_sel_cdc_ready_s = '1' then
+                if mode_busy_s = '0' and next_pending_valid_v = '1' and pattern_sel_cdc_ready_s = '1' then
                     pattern_sel_transfer_valid_s <= '1';
                     pattern_sel_transfer_data_s  <= next_pending_v;
                     pattern_sel_pending_valid_s  <= '0';
@@ -187,66 +235,55 @@ begin
     begin
         if rising_edge(pixel_clk_s) then
             if pixel_rst_s = '1' then
-                pattern_sel_s      <= pattern_select_from_mode(BLACK);
+                pattern_sel_s <= pattern_select_from_mode(BLACK);
             elsif pattern_sel_valid_pixel_s = '1' then
-                pattern_sel_s      <= pattern_sel_cdc_s;
+                pattern_sel_s <= pattern_sel_cdc_s;
             end if;
         end if;
     end process;
 
     u_vga_timing_generator : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => pixel_rst_s,
-            vga_mode_i     => vga_mode_s,
-            hsync_o        => hsync_s,
-            vsync_o        => vsync_s,
-            active_video_o => open,
-            video_on_o     => video_on_s,
-            x_o            => x_s,
-            y_o            => y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => pixel_rst_s,
+            mode_i             => active_mode_s,
+            hold_i             => pixel_hold_s,
+            hsync_o            => hsync_s,
+            vsync_o            => vsync_s,
+            active_video_o     => open,
+            video_on_o         => video_on_s,
+            x_o                => x_s,
+            y_o                => y_s,
+            mode_switch_safe_o => mode_safe_s,
+            hold_active_o      => open
         );
 
     u_vga_pattern_generator_top : entity work.vga_pattern_generator
-        generic map (
-            G_VGA_MODE      => G_VGA_MODE,
-            G_X_WIDTH       => C_X_WIDTH,
-            G_Y_WIDTH       => C_Y_WIDTH,
-            G_ACTIVE_WIDTH  => C_ACTIVE_WIDTH,
-            G_ACTIVE_HEIGHT => C_ACTIVE_HEIGHT
-        )
         port map (
             pattern_sel_i => pattern_sel_s,
+            mode_i        => active_mode_s,
             video_on_i    => video_on_s,
-            x_i           => x_s(C_X_WIDTH - 1 downto 0),
-            y_i           => y_s(C_Y_WIDTH - 1 downto 0),
+            x_i           => x_s,
+            y_i           => y_s,
             red_o         => red_s,
             green_o       => green_s,
             blue_o        => blue_s
         );
 
     p_vga_output_registers : process(pixel_clk_s)
+        variable timing_v : t_vga_timing;
     begin
         if rising_edge(pixel_clk_s) then
             if pixel_rst_s = '1' then
+                timing_v := get_vga_timing(active_mode_s);
                 video_on_reg_s <= '0';
 
                 red_reg_s      <= (others => '0');
                 green_reg_s    <= (others => '0');
                 blue_reg_s     <= (others => '0');
 
-                if C_TIMING.h_polarity = ACTIVE_LOW then
-                    hsync_reg_s <= '1';
-                else
-                    hsync_reg_s <= '0';
-                end if;
-
-                if C_TIMING.v_polarity = ACTIVE_LOW then
-                    vsync_reg_s <= '1';
-                else
-                    vsync_reg_s <= '0';
-                end if;
-                
+                hsync_reg_s <= f_sync_output_level(false, timing_v.h_polarity);
+                vsync_reg_s <= f_sync_output_level(false, timing_v.v_polarity);
             else
                 video_on_reg_s <= video_on_s;
 

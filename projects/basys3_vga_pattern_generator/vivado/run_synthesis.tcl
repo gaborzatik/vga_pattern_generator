@@ -27,6 +27,40 @@ proc ensure_project {script_dir project_file} {
     }
 }
 
+proc require_no_run_critical_warnings {log_file} {
+    set normalized [file normalize $log_file]
+
+    if {![file exists $normalized]} {
+        error "Synthesis run log not found: $normalized"
+    }
+
+    set fp [open $normalized r]
+    set log_text [read $fp]
+    close $fp
+
+    if {[regexp {([0-9]+) Critical Warnings} $log_text -> critical_warning_count]} {
+        if {$critical_warning_count > 0} {
+            error "Synthesis completed with $critical_warning_count critical warning(s). See: $normalized"
+        }
+    }
+}
+
+proc require_timing_constraints_met {report_file} {
+    set normalized [file normalize $report_file]
+
+    if {![file exists $normalized]} {
+        error "Synthesis timing report not found: $normalized"
+    }
+
+    set fp [open $normalized r]
+    set report_text [read $fp]
+    close $fp
+
+    if {[string first "Timing constraints are not met." $report_text] >= 0} {
+        error "Synthesis timing constraints are not met. See: $normalized"
+    }
+}
+
 ensure_project $script_dir $project_file
 
 file mkdir $reports_dir
@@ -65,6 +99,11 @@ report_timing_summary \
     -delay_type max \
     -max_paths 20 \
     -file [file join $reports_dir synth_timing_summary.rpt]
+report_clocks \
+    -file [file join $reports_dir synth_clocks.rpt]
+
+require_no_run_critical_warnings [file join $runs_dir synth_1 runme.log]
+require_timing_constraints_met [file join $reports_dir synth_timing_summary.rpt]
 
 puts "Synthesis completed successfully."
 puts "Run log:"
@@ -72,5 +111,6 @@ puts "  [file join $runs_dir synth_1 runme.log]"
 puts "Reports:"
 puts "  [file join $reports_dir synth_utilization.rpt]"
 puts "  [file join $reports_dir synth_timing_summary.rpt]"
+puts "  [file join $reports_dir synth_clocks.rpt]"
 
 close_project

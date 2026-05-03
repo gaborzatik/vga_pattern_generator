@@ -77,13 +77,32 @@ Supported operation IDs:
 | Operation ID | Command | Payload |
 | --- | --- | --- |
 | `00` | `VGA_MODE_SELECT` | Pattern enum value from `t_pattern_mode` |
-| `01` | `VGA_CLOCK_SELECT` | Pixel-clock enum value |
+| `01` | `VGA_CLOCK_SELECT` | Runtime video mode value |
 
-The wrapper currently stores `VGA_CLOCK_SELECT`, and the decoder simulation
-checks it, but the generated Clocking Wizard still exposes only the fixed
-65 MHz XGA pixel clock. Runtime pixel-clock switching will require a
-multi-output or dynamically reconfigurable clocking block and timing-generator
-runtime mode selection.
+The `VGA_CLOCK_SELECT` wire-protocol name is retained for compatibility with
+existing host tooling. In RTL and documentation it now behaves as runtime video
+mode select:
+
+| Payload | Runtime mode | Pixel clock |
+| --- | --- | --- |
+| `0` | `VGA_640X480_60` | 25.175 MHz |
+| `1` | `SVGA_800X600_60` | 40.000 MHz |
+| `2` | `XGA_1024X768_60` | 65.000 MHz |
+
+Other payload values are ignored. A same-mode command received while idle is
+ignored. Any mode command received while a mode switch is busy is ignored,
+including a same-mode command. There is no FIFO for mode commands.
+
+The wrapper distinguishes:
+
+- `requested_mode`
+  System-domain payload latched before the request toggle and held stable until
+  the switch transaction completes
+- `current_mode`
+  System-domain mode that drives the dedicated clock mux select outputs
+- `active_mode`
+  Pixel-pipeline mode consumed by timing and pattern cores; it changes only
+  after the pixel pipeline is held blank and the release toggle is observed
 
 UART commands are decoded in the 100 MHz system-clock domain. Pattern selector
 updates cross into the pixel-clock domain through a small request/acknowledge
@@ -91,6 +110,22 @@ handshake CDC, so the multi-bit selector payload is captured as one coherent
 value instead of being sampled bit-by-bit. The source side keeps a pending
 selector update until the CDC reports ready, so a selector command is not lost
 while a previous transfer is still awaiting acknowledgement.
+
+During a mode switch, pattern selector CDC transfers are not started. The
+system domain keeps one pending pattern selector slot; pattern commands received
+while busy overwrite that slot, so the behavior is last-wins. When the mode
+switch completes, the pending selector is transferred if the pending flag is
+set. There is no pattern FIFO. The active pattern is not reset to BLACK during a
+mode switch; BLACK is only the global reset default.
+
+Runtime mode switches are frame-boundary switches. The pixel-side handshake
+waits for `mode_switch_safe_o` from the timing core, asserts a pipeline hold
+that blanks RGB/video and drives sync idle for the selected mode, then returns a
+toggle-based `safe_ack` to the system-domain FSM. The system FSM switches the
+clock mux only after that ack, waits `clock_mux_settle_cycles` system-clock
+cycles (default 256) and `locked = 1`, then releases the pixel pipeline with a
+release toggle. The first non-held pixel cycle is frame origin before counting
+continues.
 
 The push-button reset is synchronized in the 100 MHz system-clock domain. The
 pixel pipeline receives its own reset that asserts while the system reset is
@@ -157,8 +192,8 @@ serial monitor.
 py scripts\vga_uart_cli.py list
 ```
 
-The command prints the pattern enum names and the currently known clock enum
-names. Pattern names can be used directly in `mode` commands.
+The command prints the pattern enum names and the currently known runtime video
+mode names. Pattern names can be used directly in `mode` commands.
 
 ### Select a pattern
 
@@ -204,19 +239,17 @@ py scripts\vga_uart_cli.py raw --port COM9 0x02
 `0x02` is binary `00_000010`: operation ID `00`, payload `2`, which selects
 the `RED` pattern.
 
-### Clock command status
+### Runtime video mode command
 
-The CLI also supports the clock command shape:
+The CLI `clock` command name follows the compatibility wire protocol, but the
+payload now selects the live video mode:
 
 ```powershell
 py scripts\vga_uart_cli.py clock --port COM9 XGA_1024X768_60
 ```
 
-The RTL decoder captures this command, and the UART decoder simulation checks
-it. The current hardware wrapper still uses a fixed 65 MHz XGA pixel clock,
-so this command does not yet switch the live pixel clock. Runtime pixel-clock
-switching still needs a later clocking refactor with a multi-output or
-dynamically reconfigurable clocking block and runtime timing-mode selection.
+Supported payload names are `VGA_640X480_60`, `SVGA_800X600_60`, and
+`XGA_1024X768_60`. Unsupported numeric payloads are ignored by the RTL.
 
 ### Troubleshooting
 
@@ -243,6 +276,9 @@ The wrapper project includes a smoke test and a simulation-only clocking model:
   Checks the UART command decoder operation IDs and payload extraction
 - `sim/tb/tb_cdc_bus_handshake.vhd`
   Checks the sys-clock to pixel-clock style request/acknowledge payload transfer
+- `sim/tb/tb_vga_mode_switch_controller.vhd`
+  Checks invalid/same-mode ignore behavior, busy command ignore, request to
+  safe-ack to release sequencing, mux selects, and active-mode update
 - `sim/model/clk_wiz_pixel.vhd`
   Behavioral model for the Clocking Wizard interface used by the wrapper
 - `sim/tb/tb_basys3_vga_top_smoke.vhd`
@@ -263,7 +299,8 @@ the strongest facts available from the checked-in sources.
 
 - Clocking Wizard instance/module name: `clk_wiz_pixel`
 - Input clock port name: `clk_in1`
-- Output clock port name used by the wrapper: `clk_out1`
+- Output clock port names used by the wrapper: `clk_out1`, `clk_out2`,
+  `clk_out3`
 - Reset port name: `reset`
 - Locked port name: `locked`
 - Reset is actively used by the wrapper
@@ -272,20 +309,33 @@ the strongest facts available from the checked-in sources.
 
 ### Current reconstructed configuration
 
-- Requested output frequency: `65.000 MHz`
+- Requested output frequencies: `25.175 MHz`, `40.000 MHz`, and `65.000 MHz`
 - Current default wrapper mode: `XGA_1024X768_60`
+- Clocking Wizard output drives: `No_buffer` for `clk_out1`, `clk_out2`, and
+  `clk_out3`, so the dedicated mux primitives receive unbuffered MMCM outputs
+- Dedicated clock selection topology: `clk_out1` vs `clk_out2` in the lower
+  `BUFGMUX_CTRL`, then lower mux output vs `clk_out3` in the upper
+  `BUFGMUX_CTRL`
 
-This configuration matches the current wrapper default mode
-(`XGA_1024X768_60`) and the checked-in Vivado recreate Tcl. If you still have
-the original Vivado IP customization files, compare them against the Tcl and
-update the property set if needed.
+This configuration matches the runtime mode-switch wrapper and the checked-in
+Vivado recreate Tcl. The Clocking Wizard output buffering and generated-clock
+constraints must be validated with Vivado after IP generation. If Vivado emits
+already-buffered outputs or rejects the buffer topology, keep the dedicated
+glitchless clock-mux approach but adjust the IP output-buffer settings or mux
+placement to a Vivado-legal structure. Vivado's reported actual output
+frequencies must also be checked against the requested `25.175`, `40.000`, and
+`65.000 MHz` targets; if one Clocking Wizard cannot produce acceptable
+frequencies from the 100 MHz input, stop and report that blocker instead of
+changing to DRP, multiple MMCMs, or another clocking architecture. Do not
+replace this with DRP/MMCM dynamic reconfiguration without a separate design
+decision.
 
 ## RTL linter waiver rationale
 
 Vivado generates a Verilog wrapper for the Clocking Wizard IP under the build
 tree. That generated wrapper includes optional clock outputs and internal
-`*_unused` sink signals even when this project only uses `clk_out1`, `reset`,
-and `locked`.
+`*_unused` sink signals even when this project only uses `clk_out1`,
+`clk_out2`, `clk_out3`, `reset`, and `locked`.
 
 When the RTL linter analyzes that generated wrapper, it reports expected
 `ASSIGN-5` and `ASSIGN-6` warnings about bits that are not set or not read.
@@ -358,9 +408,14 @@ The generated bitstream is written under:
 build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.runs/impl_1/basys3_vga_top.bit
 ```
 
-## Current validated status
+## Current validation status
 
-The branch has been checked with Vivado 2024.2 on the Basys3 wrapper:
+The previous fixed-XGA wrapper was checked with Vivado 2024.2. After the
+runtime mode-switch refactor, Vivado must be rerun to validate the
+three-output Clocking Wizard, `BUFGMUX_CTRL` topology, generated-clock
+constraints, linter, synthesis, implementation, and CDC report.
+
+Previous fixed-XGA status before this clocking refactor:
 
 - linter completed with 0 errors and 0 critical warnings
 - the remaining unwaived lint warning is the existing pattern-core

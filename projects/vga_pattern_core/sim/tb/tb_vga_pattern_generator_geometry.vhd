@@ -49,17 +49,17 @@ end entity tb_vga_pattern_generator_geometry;
 
 architecture sim of tb_vga_pattern_generator_geometry is
 
-    -- Test geometry matches the default VGA mode used by the DUT generics.
+    -- Main samples use VGA first, then the same DUT runtime mode input is
+    -- switched to the larger supported geometries near the end of the test.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
-    constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
-    constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
     constant C_ACTIVE_WIDTH  : natural := get_vga_timing(C_MODE).h_addr_video;
     constant C_ACTIVE_HEIGHT : natural := get_vga_timing(C_MODE).v_addr_video;
 
     signal pattern_sel_s     : t_pattern_sel_slv := pattern_select_from_mode(BLACK);
+    signal mode_s            : t_vga_mode := C_MODE;
     signal video_on_s        : std_logic := '1';
-    signal x_s               : unsigned(C_X_WIDTH - 1 downto 0) := (others => '0');
-    signal y_s               : unsigned(C_Y_WIDTH - 1 downto 0) := (others => '0');
+    signal x_s               : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0) := (others => '0');
+    signal y_s               : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0) := (others => '0');
     signal red_s             : t_rgb_channel;
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
@@ -126,15 +126,9 @@ begin
     -- Device under test: full generator used to cover selector decoding,
     -- coordinate-dependent pattern instances, and final RGB channel extraction.
     dut : entity work.vga_pattern_generator
-        generic map (
-            G_VGA_MODE      => C_MODE,
-            G_X_WIDTH       => C_X_WIDTH,
-            G_Y_WIDTH       => C_Y_WIDTH,
-            G_ACTIVE_WIDTH  => C_ACTIVE_WIDTH,
-            G_ACTIVE_HEIGHT => C_ACTIVE_HEIGHT
-        )
         port map (
             pattern_sel_i => pattern_sel_s,
+            mode_i        => mode_s,
             video_on_i    => video_on_s,
             x_i           => x_s,
             y_i           => y_s,
@@ -345,6 +339,47 @@ begin
                 message  => "GRAYSCALE_RAMP mismatch at gray index " & integer'image(gray_idx_v) & "."
             );
         end loop;
+
+        mode_s <= SVGA_800X600_60;
+        wait for 1 ns;
+        drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
+            mode     => BORDER_1PX,
+            x_coord  => get_vga_timing(SVGA_800X600_60).h_addr_video - 1,
+            y_coord  => get_vga_timing(SVGA_800X600_60).v_addr_video - 1,
+            video_on_value => '1',
+            expected => C_RGB_GREEN,
+            message  => "Runtime SVGA border geometry mismatch."
+        );
+
+        mode_s <= XGA_1024X768_60;
+        wait for 1 ns;
+        sample_x_v := (13 * get_vga_timing(XGA_1024X768_60).h_addr_video) / 14;
+        if sample_x_v >= get_vga_timing(XGA_1024X768_60).h_addr_video then
+            sample_x_v := get_vga_timing(XGA_1024X768_60).h_addr_video - 1;
+        end if;
+
+        drive_and_expect(
+            pattern_sel  => pattern_sel_s,
+            video_on     => video_on_s,
+            x_value      => x_s,
+            y_value      => y_s,
+            actual_red   => red_s,
+            actual_green => green_s,
+            actual_blue  => blue_s,
+            mode     => COLOR_BARS,
+            x_coord  => sample_x_v,
+            y_coord  => 40,
+            video_on_value => '1',
+            expected => C_RGB_BLUE,
+            message  => "Runtime XGA color-bar geometry mismatch."
+        );
 
         report "tb_vga_pattern_generator_geometry completed successfully."
             severity note;

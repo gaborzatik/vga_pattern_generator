@@ -25,6 +25,7 @@ architecture sim of tb_vga_timing_generator_reset is
 
     signal pixel_clk_s          : std_logic := '0';
     signal sync_pos_rst_s       : std_logic := '1';
+    signal hold_s               : std_logic := '0';
 
     signal hsync_s              : std_logic;
     signal vsync_s              : std_logic;
@@ -32,38 +33,45 @@ architecture sim of tb_vga_timing_generator_reset is
     signal video_on_s           : std_logic;
     signal x_s                  : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal y_s                  : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
+    signal mode_switch_safe_s   : std_logic;
+    signal hold_active_s        : std_logic;
 
     procedure assert_reset_state is
     begin
         assert_std_logic_equal(
             actual   => hsync_s,
-            expected => expected_sync_level(true, C_TIMING.h_polarity),
-            message  => "Reset state hsync mismatch."
+            expected => expected_sync_level(false, C_TIMING.h_polarity),
+            message  => "Held state hsync mismatch."
         );
         assert_std_logic_equal(
             actual   => vsync_s,
-            expected => expected_sync_level(true, C_TIMING.v_polarity),
-            message  => "Reset state vsync mismatch."
+            expected => expected_sync_level(false, C_TIMING.v_polarity),
+            message  => "Held state vsync mismatch."
         );
         assert_std_logic_equal(
             actual   => active_video_s,
             expected => '0',
-            message  => "active_video_o must be low during reset."
+            message  => "active_video_o must be low while held."
         );
         assert_std_logic_equal(
             actual   => video_on_s,
             expected => '0',
-            message  => "video_on_o must be low during reset."
+            message  => "video_on_o must be low while held."
         );
         assert_unsigned_equal(
             actual   => x_s,
             expected => 0,
-            message  => "x_o must be zero during reset."
+            message  => "x_o must be zero while held."
         );
         assert_unsigned_equal(
             actual   => y_s,
             expected => 0,
-            message  => "y_o must be zero during reset."
+            message  => "y_o must be zero while held."
+        );
+        assert_std_logic_equal(
+            actual   => mode_switch_safe_s,
+            expected => '0',
+            message  => "mode_switch_safe_o must be low while held."
         );
     end procedure;
 
@@ -73,15 +81,18 @@ begin
 
     dut : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => sync_pos_rst_s,
-            vga_mode_i     => C_MODE,
-            hsync_o        => hsync_s,
-            vsync_o        => vsync_s,
-            active_video_o => active_video_s,
-            video_on_o     => video_on_s,
-            x_o            => x_s,
-            y_o            => y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => sync_pos_rst_s,
+            mode_i             => C_MODE,
+            hold_i             => hold_s,
+            hsync_o            => hsync_s,
+            vsync_o            => vsync_s,
+            active_video_o     => active_video_s,
+            video_on_o         => video_on_s,
+            x_o                => x_s,
+            y_o                => y_s,
+            mode_switch_safe_o => mode_switch_safe_s,
+            hold_active_o      => hold_active_s
         );
 
     stimulus : process
@@ -93,6 +104,14 @@ begin
         assert_reset_state;
 
         sync_pos_rst_s <= '0';
+        wait until rising_edge(pixel_clk_s);
+        cycles_since_release_v := cycles_since_release_v + 1;
+
+        assert_std_logic_equal(
+            actual   => mode_switch_safe_s,
+            expected => '1',
+            message  => "First non-held cycle must be a mode-switch safe frame origin."
+        );
 
         while active_video_s /= '1' loop
             wait until rising_edge(pixel_clk_s);
@@ -101,7 +120,7 @@ begin
 
         assert_natural_equal(
             actual   => cycles_since_release_v,
-            expected => C_FIRST_ACTIVE_CYC,
+            expected => C_FIRST_ACTIVE_CYC + 1,
             message  => "active_video_o asserted at the wrong cycle after reset release."
         );
         assert_std_logic_equal(
@@ -127,7 +146,7 @@ begin
 
         assert_natural_equal(
             actual   => cycles_since_release_v,
-            expected => C_FIRST_VIDEO_CYC,
+            expected => C_FIRST_VIDEO_CYC + 1,
             message  => "video_on_o asserted at the wrong cycle after reset release."
         );
         assert_std_logic_equal(
@@ -164,6 +183,24 @@ begin
 
         wait until rising_edge(pixel_clk_s);
         assert_reset_state;
+
+        hold_s <= '1';
+        sync_pos_rst_s <= '0';
+        wait until rising_edge(pixel_clk_s);
+        assert_reset_state;
+        assert_std_logic_equal(
+            actual   => hold_active_s,
+            expected => '1',
+            message  => "hold_active_o must mirror hold_i."
+        );
+
+        hold_s <= '0';
+        wait until rising_edge(pixel_clk_s);
+        assert_std_logic_equal(
+            actual   => mode_switch_safe_s,
+            expected => '1',
+            message  => "Hold release must expose one safe frame-origin cycle."
+        );
 
         sync_pos_rst_s <= '0';
         wait until rising_edge(pixel_clk_s);

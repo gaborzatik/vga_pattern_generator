@@ -24,6 +24,9 @@ end entity vga_uart_control;
 architecture rtl of vga_uart_control is
 
     constant C_UART_OP_VGA_MODE_SELECT  : std_logic_vector(1 downto 0) := "00";
+    -- Wire-protocol name retained for compatibility. In the Basys3 wrapper this
+    -- payload is interpreted as a runtime video mode select:
+    -- 0=VGA_640X480_60, 1=SVGA_800X600_60, 2=XGA_1024X768_60.
     constant C_UART_OP_VGA_CLOCK_SELECT : std_logic_vector(1 downto 0) := "01";
     constant C_DEFAULT_PATTERN_SEL      : t_pattern_sel_slv := pattern_select_from_mode(BLACK);
 

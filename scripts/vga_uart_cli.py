@@ -122,7 +122,7 @@ def list_values() -> None:
     for index, name in enumerate(PATTERN_MODES):
         print(f"  {index:02d}  {name}")
 
-    print("\nClock modes:")
+    print("\nRuntime video modes for VGA_CLOCK_SELECT:")
     for index, clock in enumerate(CLOCK_MODES):
         mhz = clock.pixel_clock_hz / 1_000_000
         print(f"  {index:02d}  {clock.name}  ({mhz:g} MHz)")
@@ -138,9 +138,12 @@ def build_parser() -> argparse.ArgumentParser:
     mode_parser.add_argument("--port", required=True, help="serial port, for example COM5")
     mode_parser.add_argument("value", help="pattern enum name or 6-bit numeric value")
 
-    clock_parser = subparsers.add_parser("clock", help="send VGA_CLOCK_SELECT")
+    clock_parser = subparsers.add_parser(
+        "clock",
+        help="send VGA_CLOCK_SELECT compatibility command as runtime video mode select",
+    )
     clock_parser.add_argument("--port", required=True, help="serial port, for example COM5")
-    clock_parser.add_argument("value", help="clock enum name or 6-bit numeric value")
+    clock_parser.add_argument("value", help="video mode enum name or 6-bit numeric value")
 
     raw_parser = subparsers.add_parser("raw", help="send one raw payload byte")
     raw_parser.add_argument("--port", required=True, help="serial port, for example COM5")
@@ -169,7 +172,7 @@ def main(argv: list[str]) -> int:
         enum_value = parse_enum_value(args.value, [clock.name for clock in CLOCK_MODES])
         payload = make_payload(UART_OP_VGA_CLOCK_SELECT, enum_value)
         send_payload(args.port, payload)
-        print(f"sent VGA_CLOCK_SELECT value={enum_value} payload=0x{payload:02X}")
+        print(f"sent VGA_CLOCK_SELECT runtime_video_mode={enum_value} payload=0x{payload:02X}")
         return 0
 
     if args.command == "raw":

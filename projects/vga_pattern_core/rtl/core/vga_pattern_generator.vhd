@@ -55,28 +55,20 @@ use work.vga_timing_pkg.all;
 --   selector modes return C_RGB_BLACK through the pattern output array default.
 --==============================================================================
 entity vga_pattern_generator is
-    generic (
-        -- Selects timing-derived geometry inside coordinate-dependent patterns.
-        G_VGA_MODE      : t_vga_mode := VGA_640X480_60;
-        -- Widths must be compatible with x_i/y_i and the selected timing mode.
-        G_X_WIDTH       : natural := 10;
-        G_Y_WIDTH       : natural := 10;
-        -- Geometry constants are forwarded by testbenches and wrappers for
-        -- interface compatibility; this architecture does not reference them.
-        G_ACTIVE_WIDTH  : natural := 640;
-        G_ACTIVE_HEIGHT : natural := 480
-    );
     port (
         -- Encoded pattern selector. Invalid encodings are handled by
         -- pattern_mode_from_select in the common package.
         pattern_sel_i : in  t_pattern_sel_slv;
+        -- Runtime video mode shared with the timing generator. The wrapper
+        -- changes this only while the pixel pipeline is held blank.
+        mode_i        : in  t_vga_mode;
         -- High only for the addressable pattern-generation area, not the broader
         -- visible-video-with-border concept sometimes named active_video_o.
         video_on_i    : in  std_logic;
         -- Pixel coordinates sampled by coordinate-dependent patterns. Solid
         -- patterns intentionally do not consume these coordinates.
-        x_i           : in  unsigned(G_X_WIDTH - 1 downto 0);
-        y_i           : in  unsigned(G_Y_WIDTH - 1 downto 0);
+        x_i           : in  unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+        y_i           : in  unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
         -- Selected RGB channel outputs for the current combinational sample.
         red_o         : out t_rgb_channel;
@@ -169,23 +161,19 @@ begin
         );
 
     -- Seven-bar and grayscale-ramp patterns derive their horizontal partitions
-    -- from G_VGA_MODE through the timing package.
+    -- from the runtime video mode.
     u_pattern_seven_bars : entity work.pattern_seven_bars
-        generic map (
-            G_VGA_MODE => G_VGA_MODE
-        )
         port map (
             video_on_i => video_on_i,
+            mode_i     => mode_i,
             x_i        => x_i,
             rgb_o      => color_bars_rgb_s
         );
 
     u_pattern_grayscale_ramp : entity work.pattern_grayscale_ramp
-        generic map (
-            G_VGA_MODE => G_VGA_MODE
-        )
         port map (
             video_on_i => video_on_i,
+            mode_i     => mode_i,
             x_i        => x_i,
             rgb_o      => grayscale_ramp_rgb_s
         );
@@ -227,11 +215,9 @@ begin
     -- Border pattern uses both coordinates and the selected timing mode's
     -- addressable width/height to identify edge pixels.
     u_pattern_1pixel_border : entity work.pattern_1pixel_border
-        generic map (
-            G_VGA_MODE => G_VGA_MODE
-        )
         port map (
             video_on_i => video_on_i,
+            mode_i     => mode_i,
             x_i        => x_i,
             y_i        => y_i,
             rgb_o      => border_1px_rgb_s

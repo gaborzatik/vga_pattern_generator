@@ -90,6 +90,7 @@ set wrapper_files [list \
     [file join $project_root rtl reset_controller.vhd] \
     [file join $project_root rtl uart_rx_8n1.vhd] \
     [file join $project_root rtl vga_uart_control.vhd] \
+    [file join $project_root rtl vga_mode_switch_controller.vhd] \
     [file join $project_root rtl basys3_vga_top.vhd] \
 ]
 
@@ -108,13 +109,15 @@ add_files -fileset constrs_1 -norecurse $cdc_constraint_file
 #
 # Directly proven from the checked-in wrapper sources:
 #   - module name: clk_wiz_pixel
-#   - one generated clock output is used (clk_out1)
+#   - three generated clock outputs are used (clk_out1/2/3)
 #   - input port is clk_in1 driven from the 100 MHz Basys3 board clock
 #   - reset input is used and wired to btnc_i
 #   - locked output is used to hold the timing core in reset until stable
 #
 # Current default wrapper mode:
-#   - requested output frequency is 65.000 MHz for XGA_1024X768_60
+#   - clk_out1 requested output frequency is 25.175 MHz for VGA_640X480_60
+#   - clk_out2 requested output frequency is 40.000 MHz for SVGA_800X600_60
+#   - clk_out3 requested output frequency is 65.000 MHz for XGA_1024X768_60
 #
 # The original .xci/.xcix customization file is not present in this workspace,
 # so only the parameters evidenced by source plus the necessary reconstruction
@@ -128,10 +131,21 @@ set_property -dict [list \
     CONFIG.PRIM_IN_FREQ {100.000} \
     CONFIG.PRIM_SOURCE {No_buffer} \
     CONFIG.PRIMARY_PORT {clk_in1} \
-    CONFIG.NUM_OUT_CLKS {1} \
-    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {65.000} \
+    CONFIG.NUM_OUT_CLKS {3} \
+    CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {25.175} \
     CONFIG.CLKOUT1_REQUESTED_PHASE {0.000} \
     CONFIG.CLKOUT1_REQUESTED_DUTY_CYCLE {50.000} \
+    CONFIG.CLKOUT1_DRIVES {No_buffer} \
+    CONFIG.CLKOUT2_USED {true} \
+    CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {40.000} \
+    CONFIG.CLKOUT2_REQUESTED_PHASE {0.000} \
+    CONFIG.CLKOUT2_REQUESTED_DUTY_CYCLE {50.000} \
+    CONFIG.CLKOUT2_DRIVES {No_buffer} \
+    CONFIG.CLKOUT3_USED {true} \
+    CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {65.000} \
+    CONFIG.CLKOUT3_REQUESTED_PHASE {0.000} \
+    CONFIG.CLKOUT3_REQUESTED_DUTY_CYCLE {50.000} \
+    CONFIG.CLKOUT3_DRIVES {No_buffer} \
     CONFIG.USE_RESET {true} \
     CONFIG.RESET_PORT {reset} \
     CONFIG.RESET_TYPE {ACTIVE_HIGH} \

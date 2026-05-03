@@ -23,6 +23,9 @@ This directory contains batch-mode Vivado Tcl scripts for the
 - `run_sim_uart_control.tcl`
   Opens or recreates the project, adds the UART control decoder testbench, then
   runs behavioral XSim
+- `run_sim_mode_switch_controller.tcl`
+  Opens or recreates the project, adds the runtime mode-switch controller
+  testbench, then runs behavioral XSim
 - `run_sim_cdc_bus_handshake.tcl`
   Opens or recreates the project, adds the CDC bus handshake testbench, then
   runs behavioral XSim
@@ -51,6 +54,7 @@ vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_lint
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_report_cdc.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_cdc_bus_handshake.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_uart_control.tcl
+vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_mode_switch_controller.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_smoke.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_sim_all.tcl
 vivado -mode batch -source projects/basys3_vga_pattern_generator/vivado/run_synthesis.tcl
@@ -75,9 +79,10 @@ The smoke test uses:
 - `sim/model/clk_wiz_pixel.vhd`
 - `sim/tb/tb_basys3_vga_top_smoke.vhd`
 
-It verifies reset blanking, basic sync activity, and UART-driven selector propagation
-through the wrapper-level RGB outputs. The script temporarily marks the
-generated Clocking Wizard IP as not used for simulation so the checked-in
+It verifies reset blanking, basic sync activity, UART-driven selector
+propagation through the wrapper-level RGB outputs, and a UART runtime mode
+command that restarts timing with VGA hsync width. The script temporarily marks
+the generated Clocking Wizard IP as not used for simulation so the checked-in
 simulation model can provide the same entity interface.
 
 ### `run_sim_uart_control.tcl`
@@ -91,7 +96,21 @@ The testbench uses:
 - `sim/tb/tb_vga_uart_control.vhd`
 
 It verifies the one-byte UART command format, including `VGA_MODE_SELECT`
-pattern payload decoding and `VGA_CLOCK_SELECT` clock payload capture.
+pattern payload decoding and `VGA_CLOCK_SELECT` runtime video mode payload
+capture.
+
+### `run_sim_mode_switch_controller.tcl`
+
+This script produces behavioral simulation output under:
+
+- `build/basys3_vga_pattern_generator/basys3_vga_pattern_generator.sim/sim_1/behav/xsim/`
+
+The testbench uses:
+
+- `sim/tb/tb_vga_mode_switch_controller.vhd`
+
+It verifies invalid payload ignore, idle same-mode ignore, busy command ignore,
+request/safe-ack/release sequencing, mux select updates, and active-mode update.
 
 ### `run_sim_cdc_bus_handshake.tcl`
 
@@ -110,7 +129,8 @@ request/acknowledge CDC module.
 ### `run_sim_all.tcl`
 
 This script runs `run_sim_cdc_bus_handshake.tcl`, `run_sim_uart_control.tcl`,
-and `run_sim_smoke.tcl` as the aggregate Basys3 wrapper simulation entry point.
+`run_sim_mode_switch_controller.tcl`, and `run_sim_smoke.tcl` as the aggregate
+Basys3 wrapper simulation entry point.
 
 ### `run_linter.tcl`
 

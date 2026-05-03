@@ -51,17 +51,15 @@ end entity tb_vga_pattern_generator_solid_colors;
 
 architecture sim of tb_vga_pattern_generator_solid_colors is
 
-    -- Test geometry matches the default VGA mode used by the DUT generics.
+    -- Test geometry uses the runtime VGA mode supplied to the DUT.
     constant C_MODE          : t_vga_mode := VGA_640X480_60;
-    constant C_X_WIDTH       : natural := get_x_coord_width(C_MODE);
-    constant C_Y_WIDTH       : natural := get_y_coord_width(C_MODE);
     constant C_ACTIVE_WIDTH  : natural := get_vga_timing(C_MODE).h_addr_video;
     constant C_ACTIVE_HEIGHT : natural := get_vga_timing(C_MODE).v_addr_video;
 
     signal pattern_sel_s     : t_pattern_sel_slv := pattern_select_from_mode(BLACK);
     signal video_on_s        : std_logic := '0';
-    signal x_s               : unsigned(C_X_WIDTH - 1 downto 0) := to_unsigned(17, C_X_WIDTH);
-    signal y_s               : unsigned(C_Y_WIDTH - 1 downto 0) := to_unsigned(23, C_Y_WIDTH);
+    signal x_s               : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0) := to_unsigned(17, C_VGA_MAX_X_COORD_WIDTH);
+    signal y_s               : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0) := to_unsigned(23, C_VGA_MAX_Y_COORD_WIDTH);
     signal red_s             : t_rgb_channel;
     signal green_s           : t_rgb_channel;
     signal blue_s            : t_rgb_channel;
@@ -95,19 +93,11 @@ architecture sim of tb_vga_pattern_generator_solid_colors is
 
 begin
 
-    -- Device under test: pattern selector and RGB mux. The geometry generics are
-    -- supplied consistently with the timing package even though this test keeps
-    -- x_s/y_s fixed for coordinate-independent patterns.
+    -- Device under test: pattern selector and RGB mux.
     dut : entity work.vga_pattern_generator
-        generic map (
-            G_VGA_MODE      => C_MODE,
-            G_X_WIDTH       => C_X_WIDTH,
-            G_Y_WIDTH       => C_Y_WIDTH,
-            G_ACTIVE_WIDTH  => C_ACTIVE_WIDTH,
-            G_ACTIVE_HEIGHT => C_ACTIVE_HEIGHT
-        )
         port map (
             pattern_sel_i => pattern_sel_s,
+            mode_i        => C_MODE,
             video_on_i    => video_on_s,
             x_i           => x_s,
             y_i           => y_s,

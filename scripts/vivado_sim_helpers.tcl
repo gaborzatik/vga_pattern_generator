@@ -64,6 +64,31 @@ proc sim_prepare_fileset {fileset_name top_module file_list} {
     set_property top_lib xil_defaultlib $fileset_obj
 }
 
+proc sim_check_xsim_log {fileset_name} {
+    set project_dir  [get_property DIRECTORY [current_project]]
+    set project_name [get_property NAME [current_project]]
+    set sim_log [file join $project_dir "${project_name}.sim" $fileset_name behav xsim simulate.log]
+
+    if {![file exists $sim_log]} {
+        set candidates [glob -nocomplain -directory $project_dir -types f -tails \
+            [file join "*.sim" $fileset_name behav xsim simulate.log]]
+
+        if {[llength $candidates] != 0} {
+            set sim_log [file join $project_dir [lindex $candidates 0]]
+        }
+    }
+
+    if {[file exists $sim_log]} {
+        set fh [open $sim_log r]
+        set content [read $fh]
+        close $fh
+
+        if {[regexp {(^|\n)(Failure|Fatal):} $content]} {
+            error "XSim reported an assertion failure. See: $sim_log"
+        }
+    }
+}
+
 proc sim_run_fileset {fileset_name} {
     set fileset_obj [get_filesets $fileset_name]
 
@@ -71,4 +96,5 @@ proc sim_run_fileset {fileset_name} {
 
     launch_simulation -simset $fileset_name -mode behavioral
     close_sim
+    sim_check_xsim_log $fileset_name
 }

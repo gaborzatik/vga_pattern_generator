@@ -30,6 +30,7 @@ architecture sim of tb_vga_timing_generator_coordinates is
     signal video_on_s           : std_logic;
     signal x_s                  : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
     signal y_s                  : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
+    signal mode_switch_safe_s   : std_logic;
 
 begin
 
@@ -37,15 +38,18 @@ begin
 
     dut : entity work.vga_timing_generator
         port map (
-            pixel_clk_i    => pixel_clk_s,
-            sync_pos_rst_i => sync_pos_rst_s,
-            vga_mode_i     => C_MODE,
-            hsync_o        => hsync_s,
-            vsync_o        => vsync_s,
-            active_video_o => active_video_s,
-            video_on_o     => video_on_s,
-            x_o            => x_s,
-            y_o            => y_s
+            pixel_clk_i        => pixel_clk_s,
+            sync_pos_rst_i     => sync_pos_rst_s,
+            mode_i             => C_MODE,
+            hold_i             => '0',
+            hsync_o            => hsync_s,
+            vsync_o            => vsync_s,
+            active_video_o     => active_video_s,
+            video_on_o         => video_on_s,
+            x_o                => x_s,
+            y_o                => y_s,
+            mode_switch_safe_o => mode_switch_safe_s,
+            hold_active_o      => open
         );
 
     stimulus : process
