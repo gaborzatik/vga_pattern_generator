@@ -57,8 +57,9 @@ architecture rtl of basys3_vga_top is
     signal vsync_s           : std_logic;
     signal video_on_s        : std_logic;
 
-    signal x_s               : unsigned(C_X_WIDTH - 1 downto 0);
-    signal y_s               : unsigned(C_Y_WIDTH - 1 downto 0);
+    signal vga_mode_s        : t_vga_mode := G_VGA_MODE;
+    signal x_s               : unsigned(C_VGA_MAX_X_COORD_WIDTH - 1 downto 0);
+    signal y_s               : unsigned(C_VGA_MAX_Y_COORD_WIDTH - 1 downto 0);
 
     signal pattern_sel_ctrl_s : t_pattern_sel_slv;
     signal pattern_sel_valid_ctrl_s : std_logic;
@@ -194,12 +195,10 @@ begin
     end process;
 
     u_vga_timing_generator : entity work.vga_timing_generator
-        generic map (
-            G_VGA_MODE => G_VGA_MODE
-        )
         port map (
             pixel_clk_i    => pixel_clk_s,
             sync_pos_rst_i => pixel_rst_s,
+            vga_mode_i     => vga_mode_s,
             hsync_o        => hsync_s,
             vsync_o        => vsync_s,
             active_video_o => open,
@@ -219,8 +218,8 @@ begin
         port map (
             pattern_sel_i => pattern_sel_s,
             video_on_i    => video_on_s,
-            x_i           => x_s,
-            y_i           => y_s,
+            x_i           => x_s(C_X_WIDTH - 1 downto 0),
+            y_i           => y_s(C_Y_WIDTH - 1 downto 0),
             red_o         => red_s,
             green_o       => green_s,
             blue_o        => blue_s

@@ -31,8 +31,10 @@ There is currently no committed XDC constraints file in this subproject.
   - `t_sync_polarity`
   - `t_vga_mode`
   - `t_vga_timing`
+  - `t_vga_timing_derived`
   - helper functions for totals, active ranges, addressable ranges, and
     coordinate bus widths
+  - `get_vga_timing_derived` for mode-to-runtime-timing decoding
 - `rtl/core/vga_timing_generator.vhd`
   Implements the actual timing generator core
 - `vivado/create_project.tcl`
@@ -60,16 +62,11 @@ The package currently defines the following modes:
 
 The module does not generate the pixel clock internally. It expects
 `pixel_clk_i` to already run at the correct frequency for the selected
-`G_VGA_MODE`.
+`vga_mode_i`.
 
 ## RTL interface
 
 Entity: `vga_timing_generator`
-
-Generic:
-
-- `G_VGA_MODE`
-  Selects the timing preset from `t_vga_mode`
 
 Inputs:
 
@@ -77,6 +74,9 @@ Inputs:
   Pixel clock for the selected mode
 - `sync_pos_rst_i`
   Synchronous active-high reset for the timing counters
+- `vga_mode_i`
+  Selects the timing preset from `t_vga_mode`; the input can be changed at run
+  time when the surrounding design also switches to the matching pixel clock
 
 Outputs:
 
@@ -90,9 +90,11 @@ Outputs:
 - `video_on_o`
   High only during the addressable image area
 - `x_o`
-  Zero-based X coordinate inside the addressable region
+  Zero-based X coordinate inside the addressable region, sized to the maximum
+  supported coordinate width
 - `y_o`
-  Zero-based Y coordinate inside the addressable region
+  Zero-based Y coordinate inside the addressable region, sized to the maximum
+  supported coordinate width
 
 When `video_on_o = '0'`, both coordinate outputs are driven to zero.
 
@@ -107,7 +109,7 @@ timing record.
   polarity
 - `active_video_o` and `video_on_o` are derived from separate active and
   addressable regions
-- Static assertions check timing consistency during elaboration
+- Assertions check timing consistency for the currently decoded mode
 
 This makes the module suitable as a timing backbone for later pattern
 generation or framebuffer-based VGA output.

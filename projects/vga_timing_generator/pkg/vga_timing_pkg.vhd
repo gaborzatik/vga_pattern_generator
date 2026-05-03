@@ -39,9 +39,40 @@ package vga_timing_pkg is
         pixel_clock_hz  : natural;
     end record;
 
+    type t_vga_timing_derived is record
+        timing          : t_vga_timing;
+
+        h_total         : natural;
+        v_total         : natural;
+
+        h_active_start  : natural;
+        h_active_end    : natural;
+        v_active_start  : natural;
+        v_active_end    : natural;
+
+        h_addr_start    : natural;
+        h_addr_end      : natural;
+        v_addr_start    : natural;
+        v_addr_end      : natural;
+
+        h_sync_start    : natural;
+        h_sync_end      : natural;
+        v_sync_start    : natural;
+        v_sync_end      : natural;
+    end record;
+
+    constant C_VGA_MAX_H_TOTAL       : natural := 1344;
+    constant C_VGA_MAX_V_TOTAL       : natural := 806;
+    constant C_VGA_MAX_X_COORD_WIDTH : natural := 10;
+    constant C_VGA_MAX_Y_COORD_WIDTH : natural := 10;
+
     function get_vga_timing(
         mode : t_vga_mode
     ) return t_vga_timing;
+
+    pure function get_vga_timing_derived(
+        mode : t_vga_mode
+    ) return t_vga_timing_derived;
 
     function get_h_total(
         timing : t_vga_timing
@@ -174,6 +205,35 @@ package body vga_timing_pkg is
         end case;
 
         return timing_v;
+    end function;
+
+
+    pure function get_vga_timing_derived(
+        mode : t_vga_mode
+    ) return t_vga_timing_derived is
+        variable derived_v : t_vga_timing_derived;
+    begin
+        derived_v.timing := get_vga_timing(mode);
+
+        derived_v.h_total := get_h_total(derived_v.timing);
+        derived_v.v_total := get_v_total(derived_v.timing);
+
+        derived_v.h_active_start := get_h_active_start(derived_v.timing);
+        derived_v.h_active_end   := get_h_active_end(derived_v.timing);
+        derived_v.v_active_start := get_v_active_start(derived_v.timing);
+        derived_v.v_active_end   := get_v_active_end(derived_v.timing);
+
+        derived_v.h_addr_start := get_h_addr_start(derived_v.timing);
+        derived_v.h_addr_end   := get_h_addr_end(derived_v.timing);
+        derived_v.v_addr_start := get_v_addr_start(derived_v.timing);
+        derived_v.v_addr_end   := get_v_addr_end(derived_v.timing);
+
+        derived_v.h_sync_start := 0;
+        derived_v.h_sync_end   := derived_v.timing.h_sync;
+        derived_v.v_sync_start := 0;
+        derived_v.v_sync_end   := derived_v.timing.v_sync;
+
+        return derived_v;
     end function;
 
 
